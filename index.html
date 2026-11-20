@@ -1,0 +1,58 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Arcade de Bolsillo · Juegos</title>
+<meta name="description" content="Colección de minijuegos arcade para jugar en el navegador, en el móvil o en el ordenador.">
+<meta name="theme-color" content="#0a0716">
+<link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bungee&family=Chakra+Petch:wght@400;500;600;700&family=Press+Start+2P&display=swap">
+<link rel="stylesheet" href="assets/estilo.css">
+</head>
+<body>
+  <div class="crt" aria-hidden="true"></div>
+
+  <header class="hero">
+    <div class="cielo" aria-hidden="true">
+      <div class="sol"></div>
+      <div class="suelo"><div class="rejilla"></div></div>
+    </div>
+
+    <nav class="barra">
+      <a class="logo" href="./" aria-label="Inicio">
+        <span class="logo-ico">▲</span> ADB
+      </a>
+      <div class="hud-top">
+        <span><small>JUEGOS</small><b id="statJuegos">0</b></span>
+        <span><small>PUNTOS TOTALES</small><b id="statPuntos">0</b></span>
+      </div>
+    </nav>
+
+    <div class="hero-txt">
+      <p class="insert">● INSERT COIN ●</p>
+      <h1 class="titulo" data-texto="ARCADE DE BOLSILLO">ARCADE DE <span>BOLSILLO</span></h1>
+      <p class="sub">Minijuegos de un dedo para el móvil y el ordenador. Sin descargas, sin registro: elige un cartucho y dale a jugar.</p>
+      <a class="press" href="#juegos">PRESS START</a>
+    </div>
+  </header>
+
+  <main id="juegos" class="seccion">
+    <div class="seccion-cab">
+      <h2><span class="num">01</span> Selecciona tu juego</h2>
+      <div class="filtros" id="filtros" role="group" aria-label="Filtrar por género"></div>
+    </div>
+    <div class="rejilla-juegos" id="lista"></div>
+  </main>
+
+  <footer class="pie">
+    <p><span class="pix">GAME OVER?</span> Nunca. Vuelve pronto: llegan juegos nuevos.</p>
+    <p class="mini">Tus récords se guardan solo en este navegador.</p>
+  </footer>
+
+  <script src="juegos.js"></script>
+  <script src="assets/portal.js"></script>
+</body>
+</html>
