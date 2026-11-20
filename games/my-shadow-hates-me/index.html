@@ -253,54 +253,73 @@ canvas { position: absolute; inset: 0; width: 100%; height: 100%; touch-action: 
     ctx.globalAlpha = 1;
   }
 
-  // ===================== JUEGO 3: Mi Sombra Me Odia =====================
+  // ===================== GAME: My Shadow Hates Me (v2) =====================
   const RECUERDOS = [
-    "Memory 1 · The morning you showed up late",
-    "Memory 2 · The call you never returned",
-    "Memory 3 · The exam you didn't study for",
-    "Memory 4 · The promise you forgot",
-    "Memory 5 · The message you never sent",
-    "Memory 6 · The door you slammed",
-    "Memory 7 · Everything you put off until tomorrow",
+    "The morning you showed up late", "The call you never returned", "The exam you didn't study for",
+    "The promise you forgot", "The message you never sent", "The door you slammed",
+    "The friend you stopped calling", "The apology you never made", "The chance you let slip",
+    "Everything you put off until tomorrow",
   ];
   const Sombra = {
     id: "sombra", nombre: "My Shadow Hates Me", color: "--sombra",
-    desc: "Wander through your memories while your past mistakes chase you. Make your shadows collide.",
-    intro: "Every mistake you make leaves a shadow. They never forget: they repeat exactly what you did a few seconds ago. Recover the fragments of each memory and escape through the portal.",
+    desc: "Your past mistakes chase you, repeating every step you took. Collect the gems, outrace your rivals and escape each memory.",
+    intro: "Every mistake you make leaves a shadow. They never forget: they repeat exactly what you did a few seconds ago. Recover the gems of each memory and escape through the portal.",
     reglas: [
-      "Drag your finger to move. Your shadows replay your path with a delay.",
-      "Collect the green <b>fragments</b>. Once you have them all, the <b>portal</b> to the next memory opens.",
-      "If you make two shadows cross, <b>they cancel out</b> (+10).",
-      "<b>Double tap</b>: a quick dash that makes you invulnerable for a moment.",
-      "The blue <b>clock</b> freezes the shadows. Between memories you pick an upgrade.",
+      "<b>Drag</b> to move. Your shadows replay your path a few seconds later. Touching one costs a <b>life</b> (you have 3).",
+      "Collect the green <b>gems</b>: 5 in the first memory and 5 more in every new one. Then reach the <b>portal</b>.",
+      "Make two shadows cross and <b>they cancel out</b> (+10). <b>Double tap</b> to dash, briefly invulnerable.",
+      "The blue <b>clock</b> freezes every shadow for a few seconds.",
+      "From memory 5 a <b>rival</b> races you for the gems. Its shadows hurt you, the rival itself doesn't. Collect <b>more gems than every rival</b> to open the portal. Every 5 memories, one more rival joins.",
     ],
+    BOTCOL: ["#ffb347", "#6ee7f9", "#f472b6", "#a3e635", "#fde047"],
+
     init() {
-      this.puntos = 0; this.vidas = null; this.over = false;
-      this.sala = 0; this.escudos = 0; this.dashCD = 3; this.iman = 0; this.retrasoExtra = 0; this.sens = 1.15;
-      this.mejoraPendiente = null;
+      this.puntos = 0; this.vidas = 3; this.over = false; this.motivo = null;
+      this.sala = 0; this.escudos = 0; this.dashCD = 3; this.iman = 0; this.retrasoExtra = 0;
+      this.vmax = 290; this.sens = 1.15;
+      this.mejoraPendiente = null; this.trasMejora = null;
       this.nuevaSala();
     },
     nuevaSala() {
       this.sala++;
-      this.t = 0; this.banner = { txt: RECUERDOS[(this.sala - 1) % RECUERDOS.length], color: "#c4b5fd", t: 0 };
-      this.yo = { x: W / 2, y: TOP + (H - TOP) / 2, r: 12 };
-      this.hist = [{ t: 0, x: this.yo.x, y: this.yo.y }];
-      const k = Math.min(1 + Math.floor((this.sala - 1) / 2), 4);
-      this.nSombras = 0;
+      this.t = 0;
+      this.banner = { txt: "Memory " + this.sala + " · " + RECUERDOS[(this.sala - 1) % RECUERDOS.length], color: "#c4b5fd", t: 0 };
+      const nb = Math.floor(this.sala / 5);
+      this.avisoRival = (this.sala % 5 === 0) ? (nb === 1 ? "A RIVAL WANTS YOUR GEMS!" : "ANOTHER RIVAL JOINS!") : null;
+      this.yo = { x: W / 2, y: TOP + (H - TOP) / 2, r: 12, nS: 0 };
+      this.yo.hist = [{ t: 0, x: this.yo.x, y: this.yo.y }];
+      this.pend = { x: 0, y: 0 };
+      const esquinas = [[40, TOP + 40], [W - 40, H - 40], [W - 40, TOP + 40], [40, H - 40], [W / 2, TOP + 40]];
+      this.bots = [];
+      for (let i = 0; i < nb; i++) {
+        const [x, y] = esquinas[i % esquinas.length];
+        this.bots.push({ x, y, r: 12, nS: 0, gems: 0, hist: [{ t: 0, x, y }], color: this.BOTCOL[i % this.BOTCOL.length],
+          vel: Math.min(260, 170 + (this.sala - 5) * 6) + i * 8, react: 0.8, wp: null, nombre: nb > 1 ? "R" + (i + 1) : "RIVAL" });
+      }
       this.sombras = [];
-      for (let i = 0; i < k; i++) this.agregarSombra();
-      this.objetivo = 3 + this.sala; this.recogidos = 0;
+      const k = Math.min(1 + Math.floor(this.sala / 2), 5);
+      for (let i = 0; i < k; i++) this.agregarSombra(this.yo);
+      for (const b of this.bots) this.agregarSombra(b);
+      this.objetivo = 5 * this.sala; this.recogidos = 0; this.aparecidas = 0;
       this.portal = null;
-      this.siguiente = Math.max(6, 10 - this.sala * 0.5);
-      this.esfera = this.nuevaPos(120);
+      this.siguiente = this.intervalo();
+      this.nuevaGema();
       this.reloj = null; this.proxReloj = rnd(8, 14); this.congelado = 0;
-      this.dash = 0; this.dashT = 0; this.invul = 0; this.ultimoToque = -1; this.dir = { x: 0, y: -1 };
+      this.dash = 0; this.dashT = 0; this.invul = 1.5; this.ultimoToque = -1; this.dir = { x: 0, y: -1 };
       this.hue = (250 + this.sala * 23) % 360;
     },
-    agregarSombra() {
-      const delay = 3 + this.retrasoExtra + (this.nSombras % 5) * 1.5;
-      this.sombras.push({ delay, nace: 0, desde: this.t });
-      this.nSombras++;
+    intervalo() { return Math.max(4, 9 - this.sala * 0.4); },
+    agregarSombra(owner) {
+      const mias = this.sombras.filter((s) => s.owner === owner).length;
+      if (mias >= (owner === this.yo ? 9 : 5)) return;
+      const delay = 3 + this.retrasoExtra + (owner.nS % 5) * 1.5;
+      this.sombras.push({ owner, delay, nace: 0, desde: this.t });
+      owner.nS++;
+    },
+    nuevaGema() {
+      this.esfera = this.nuevaPos(120);
+      this.aparecidas++;
+      for (const b of this.bots) b.react = rnd(0.25, 0.6);
     },
     onResize() { if (this.yo) { this.yo.x = clamp(this.yo.x, 14, W - 14); this.yo.y = clamp(this.yo.y, TOP + 14, H - 14); } },
     nuevaPos(lejos) {
@@ -310,63 +329,130 @@ canvas { position: absolute; inset: 0; width: 100%; height: 100%; touch-action: 
       }
       return { x: W / 2, y: TOP + 60 };
     },
-    posEn(t) {
-      const h = this.hist;
+    posEn(owner, t) {
+      const h = owner.hist;
       if (t <= h[0].t) return h[0];
       let lo = 0, hi = h.length - 1;
       while (hi - lo > 1) { const m = (lo + hi) >> 1; if (h[m].t <= t) lo = m; else hi = m; }
       return h[lo];
     },
-    golpe() {
+    registrar(owner) {
+      owner.hist.push({ t: this.t, x: owner.x, y: owner.y });
+      let maxDelay = 9; for (const s of this.sombras) if (s.owner === owner && s.delay > maxDelay) maxDelay = s.delay;
+      maxDelay += 12;
+      while (owner.hist.length > 2 && owner.hist[1].t < this.t - maxDelay) owner.hist.shift();
+    },
+    golpe(s) {
       if (this.invul > 0) return;
       if (this.escudos > 0) {
         this.escudos--; this.invul = 1.2;
         flotar(this.yo.x, this.yo.y - 20, "Shield broken!", "#6ee7f9");
         return;
       }
-      explotar(this.yo.x, this.yo.y, "#9b8cff", 50);
-      this.over = true;
+      s.muerta = true;
+      this.vidas--; this.invul = 2;
+      explotar(this.yo.x, this.yo.y, "#9b8cff", 40);
+      flotar(this.yo.x, this.yo.y - 22, "-1 life", "#ff8a8a");
+      if (this.vidas <= 0) { this.motivo = "Your past caught up with you."; this.over = true; }
+    },
+    maxRival() { return this.bots.reduce((m, b) => Math.max(m, b.gems), 0); },
+    perderCarrera() {
+      const mx = this.maxRival(), mine = this.recogidos;
+      this.vidas--;
+      explotar(this.yo.x, this.yo.y, "#ff4d5e", 40);
+      if (this.vidas <= 0) { this.motivo = "Your rivals remembered better."; this.over = true; return; }
+      this.mejoraPendiente = {
+        titulo: "Memory lost",
+        texto: "Your rival" + (this.bots.length > 1 ? "s" : "") + " got " + mx + " gems and you got " + mine + ". You lose a life. Try this memory again.",
+        opciones: [{ t: "Try again", d: "Replay memory " + this.sala + ".", f: () => {} }],
+      };
+      this.trasMejora = () => { this.sala--; this.nuevaSala(); };
+    },
+    alRecoger(quien) {
+      const e = this.esfera;
+      if (quien === this.yo) { this.recogidos++; this.puntos += 5; flotar(e.x, e.y - 10, "+5", "#7ee0a1"); }
+      else { quien.gems++; flotar(e.x, e.y - 10, quien.nombre + " +1", quien.color); }
+      this.esfera = null;
+      const resto = this.objetivo - this.aparecidas;
+      if (!this.bots.length) {
+        if (this.recogidos >= this.objetivo) { this.abrirPortal("The portal is open!"); return; }
+      } else {
+        const mx = this.maxRival();
+        if (this.recogidos > mx + resto) { this.abrirPortal("You won the race! Reach the portal"); return; }
+        if (mx >= this.recogidos + resto) { this.perderCarrera(); return; }
+      }
+      this.nuevaGema();
+    },
+    abrirPortal(txt) {
+      this.portal = this.nuevaPos(160);
+      flotar(W / 2, TOP + 70, txt, "#7ee0a1");
     },
     update(dt) {
       this.t += dt;
-      if (this.banner && (this.banner.t += dt) > 2.6) this.banner = null;
+      if (this.banner && (this.banner.t += dt) > 2.6) {
+        this.banner = this.avisoRival ? { txt: this.avisoRival, color: "#ffb347", t: 0 } : null;
+        this.avisoRival = null;
+      }
       this.dash = Math.max(0, this.dash - dt);
       this.invul = Math.max(0, this.invul - dt);
       this.congelado = Math.max(0, this.congelado - dt);
 
+      // me: follow the finger, but with a top speed
+      const yo = this.yo;
+      const pl = Math.hypot(this.pend.x, this.pend.y);
+      if (pl > 140) { this.pend.x *= 140 / pl; this.pend.y *= 140 / pl; }
       if (this.dashT > 0) {
         const v = 520 * dt; this.dashT -= dt;
-        this.yo.x += this.dir.x * v; this.yo.y += this.dir.y * v;
+        yo.x += this.dir.x * v; yo.y += this.dir.y * v;
+      } else {
+        const m = Math.hypot(this.pend.x, this.pend.y), paso = Math.min(m, this.vmax * dt);
+        if (paso > 0) { const ux = this.pend.x / m, uy = this.pend.y / m; yo.x += ux * paso; yo.y += uy * paso; this.pend.x -= ux * paso; this.pend.y -= uy * paso; }
       }
-      this.yo.x = clamp(this.yo.x, 14, W - 14); this.yo.y = clamp(this.yo.y, TOP + 14, H - 14);
+      yo.x = clamp(yo.x, 14, W - 14); yo.y = clamp(yo.y, TOP + 14, H - 14);
+      this.registrar(yo);
 
-      this.hist.push({ t: this.t, x: this.yo.x, y: this.yo.y });
-      const maxDelay = Math.max(6, ...this.sombras.map((s) => s.delay)) + 12;
-      while (this.hist.length > 2 && this.hist[1].t < this.t - maxDelay) this.hist.shift();
+      // rivals: chase the gem; wander while the portal is open
+      this.bots.forEach((b, i) => {
+        let tx, ty, v = b.vel;
+        if (this.esfera) {
+          b.react -= dt;
+          if (b.react > 0) v = b.vel * 0.25;
+          const a = Math.atan2(this.esfera.y - b.y, this.esfera.x - b.x) + Math.sin(this.t * 3 + i * 2) * 0.25;
+          tx = b.x + Math.cos(a) * 100; ty = b.y + Math.sin(a) * 100;
+        } else {
+          if (!b.wp || dist(b, b.wp) < 20) b.wp = this.nuevaPos(0);
+          tx = b.wp.x; ty = b.wp.y; v = b.vel * 0.5;
+        }
+        const d = Math.hypot(tx - b.x, ty - b.y) || 1;
+        b.x += (tx - b.x) / d * v * dt; b.y += (ty - b.y) / d * v * dt;
+        b.x = clamp(b.x, 14, W - 14); b.y = clamp(b.y, TOP + 14, H - 14);
+        this.registrar(b);
+      });
 
       if ((this.siguiente -= dt) <= 0) {
-        this.agregarSombra();
-        this.siguiente = Math.max(6, 10 - this.sala * 0.5);
+        this.agregarSombra(yo);
+        for (const b of this.bots) this.agregarSombra(b);
+        this.siguiente = this.intervalo();
         flotar(W / 2, TOP + 70, "Another mistake is chasing you", "#c4b5fd");
       }
 
-      // Sombras (el tiempo congelado las deja quietas)
+      // shadows (frozen by the clock)
       for (const s of this.sombras) {
-        // congeladas: se quedan quietas y se retrasan un poco más
         if (this.congelado > 0 && s.x != null) { s.delay += dt; continue; }
         if (this.t - s.desde < s.delay) continue;
         s.nace = Math.min(1, s.nace + dt * 1.2);
         s.tt = this.t - s.delay;
-        const p = this.posEn(s.tt);
+        const p = this.posEn(s.owner, s.tt);
         s.x = p.x; s.y = p.y;
       }
       const activas = this.sombras.filter((s) => s.x != null && s.nace >= 1);
-      for (const s of activas) if (dist(s, this.yo) < this.yo.r * 1.6) this.golpe();
+      for (const s of activas) if (!s.muerta && dist(s, yo) < yo.r * 1.6) this.golpe(s);
 
-      // Sombras que se anulan
+      // two shadows crossing cancel each other out
       for (let i = 0; i < activas.length; i++) for (let j = i + 1; j < activas.length; j++) {
         const a = activas[i], b = activas[j];
-        if (!a.muerta && !b.muerta && Math.abs(a.delay - b.delay) > 0.2 && dist(a, b) < 18) {
+        if (a.muerta || b.muerta) continue;
+        if ((a.owner !== b.owner || Math.abs(a.delay - b.delay) > 0.2) && dist(a, b) < 18) {
           a.muerta = b.muerta = true;
           explotar((a.x + b.x) / 2, (a.y + b.y) / 2, "#5b4fb8", 28);
           this.puntos += 10;
@@ -374,29 +460,25 @@ canvas { position: absolute; inset: 0; width: 100%; height: 100%; touch-action: 
         }
       }
       this.sombras = this.sombras.filter((s) => !s.muerta);
+      if (this.over) return;
 
-      // Fragmentos
-      const alcance = this.yo.r + 12 + this.iman;
-      if (this.esfera && dist(this.esfera, this.yo) < alcance) {
-        this.recogidos++; this.puntos += 5;
-        flotar(this.esfera.x, this.esfera.y - 10, "+5", "#7ee0a1");
-        if (this.recogidos >= this.objetivo) {
-          this.esfera = null;
-          this.portal = this.nuevaPos(160);
-          flotar(W / 2, TOP + 70, "The portal is open!", "#7ee0a1");
-        } else this.esfera = this.nuevaPos(120);
+      // gems: whoever touches first takes it
+      if (this.esfera) {
+        if (dist(this.esfera, yo) < yo.r + 12 + this.iman) this.alRecoger(yo);
+        else for (const b of this.bots) if (dist(this.esfera, b) < b.r + 12) { this.alRecoger(b); break; }
       }
-      // Reloj
+      if (this.over || this.mejoraPendiente) return;
+      // clock
       if (!this.reloj && (this.proxReloj -= dt) <= 0) { this.reloj = this.nuevaPos(100); this.reloj.vida = 7; }
       if (this.reloj) {
         this.reloj.vida -= dt;
-        if (dist(this.reloj, this.yo) < this.yo.r + 14 + this.iman) {
+        if (dist(this.reloj, yo) < yo.r + 14 + this.iman) {
           this.congelado = 3; this.reloj = null; this.proxReloj = rnd(12, 18);
-          flotar(this.yo.x, this.yo.y - 20, "Time frozen!", "#6ee7f9");
+          flotar(yo.x, yo.y - 20, "Time frozen!", "#6ee7f9");
         } else if (this.reloj.vida <= 0) { this.reloj = null; this.proxReloj = rnd(10, 16); }
       }
-      // Portal
-      if (this.portal && dist(this.portal, this.yo) < this.yo.r + 18) {
+      // portal
+      if (this.portal && dist(this.portal, yo) < yo.r + 18) {
         this.puntos += 25;
         this.mejoraPendiente = this.opciones();
         this.trasMejora = () => this.nuevaSala();
@@ -404,13 +486,16 @@ canvas { position: absolute; inset: 0; width: 100%; height: 100%; touch-action: 
     },
     opciones() {
       const todas = [
-        { t: "Shield", d: "Survive one shadow hit.", f: () => { this.escudos++; } },
+        { t: "Shield", d: "Survive one shadow hit for free.", f: () => { this.escudos++; } },
+        { t: "Second chance", d: "Get one life back (max 5).", f: () => { this.vidas = Math.min(5, this.vidas + 1); }, si: () => this.vidas < 5 },
         { t: "Quick dash", d: "Double tap recharges faster.", f: () => { this.dashCD = Math.max(1.2, this.dashCD - 0.8); }, si: () => this.dashCD > 1.2 },
-        { t: "Magnet", d: "Pull in fragments and clocks from farther away.", f: () => { this.iman += 22; } },
-        { t: "Slow memory", d: "Your shadows trail half a second further behind.", f: () => { this.retrasoExtra += 0.5; } },
-        { t: "Light feet", d: "Move 20% farther with the same gesture.", f: () => { this.sens *= 1.2; } },
+        { t: "Magnet", d: "Grab gems and clocks from farther away.", f: () => { this.iman += 22; }, si: () => this.iman < 66 },
+        { t: "Slow memory", d: "Your shadows trail half a second further behind.", f: () => { this.retrasoExtra += 0.5; }, si: () => this.retrasoExtra < 2 },
+        { t: "Light feet", d: "Your top speed goes up 15%.", f: () => { this.vmax *= 1.15; this.sens *= 1.1; }, si: () => this.vmax < 480 },
       ].filter((o) => !o.si || o.si());
-      return { titulo: "Memory cleared", texto: "+25 points. Before the next memory, pick an upgrade:", opciones: todas.sort(() => Math.random() - 0.5).slice(0, 3) };
+      const prox = this.sala + 1, rivales = Math.floor(prox / 5);
+      const extra = prox % 5 === 0 ? " Watch out: " + (rivales === 1 ? "a rival joins" : "another rival joins") + " next memory." : "";
+      return { titulo: "Memory cleared", texto: "+25 points. Next memory: " + (5 * prox) + " gems." + extra + " Pick an upgrade:", opciones: todas.sort(() => Math.random() - 0.5).slice(0, 3) };
     },
     onDown(x, y) {
       const ahora = performance.now();
@@ -421,25 +506,30 @@ canvas { position: absolute; inset: 0; width: 100%; height: 100%; touch-action: 
       this.ultimoToque = ahora;
     },
     onMove(x, y, dx, dy) {
-      this.yo.x += dx * this.sens; this.yo.y += dy * this.sens;
+      this.pend.x += dx * this.sens; this.pend.y += dy * this.sens;
       const m = Math.hypot(dx, dy);
       if (m > 1.5) this.dir = { x: dx / m, y: dy / m };
     },
+    dibujarJugador(p, color, ojos) {
+      ctx.save(); ctx.shadowColor = color; ctx.shadowBlur = 20; ctx.fillStyle = color;
+      ctx.beginPath(); ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2); ctx.fill(); ctx.restore();
+      ctx.fillStyle = "#120f24";
+      if (ojos === "visor") { ctx.fillRect(p.x - 7, p.y - 4, 14, 4); }
+      else { ctx.beginPath(); ctx.arc(p.x - 4, p.y - 2, 2, 0, Math.PI * 2); ctx.arc(p.x + 4, p.y - 2, 2, 0, Math.PI * 2); ctx.fill(); }
+    },
     draw() {
-      // ambiente: tinte del recuerdo y viñeta
       ctx.fillStyle = "hsla(" + this.hue + ",60%,40%,.08)"; ctx.fillRect(0, TOP, W, H - TOP);
       const vg = ctx.createRadialGradient(W / 2, H / 2, Math.min(W, H) * 0.25, W / 2, H / 2, Math.max(W, H) * 0.75);
       vg.addColorStop(0, "rgba(0,0,0,0)"); vg.addColorStop(1, "rgba(0,0,0,.55)");
       ctx.fillStyle = vg; ctx.fillRect(0, 0, W, H);
 
-      // rastro de las sombras
+      // shadow trails
       for (const s of this.sombras) {
         if (s.x == null) continue;
-        ctx.strokeStyle = "rgba(155,140,255,.12)"; ctx.lineWidth = 6; ctx.lineCap = "round";
-        ctx.beginPath();
-        let first = true;
+        ctx.strokeStyle = s.owner === this.yo ? "rgba(155,140,255,.12)" : "rgba(255,179,71,.08)"; ctx.lineWidth = 6; ctx.lineCap = "round";
+        ctx.beginPath(); let first = true;
         for (let tt = s.tt ?? 0; tt <= this.t; tt += 0.08) {
-          const p = this.posEn(tt);
+          const p = this.posEn(s.owner, tt);
           if (first) { ctx.moveTo(p.x, p.y); first = false; } else ctx.lineTo(p.x, p.y);
         }
         ctx.stroke();
@@ -447,12 +537,11 @@ canvas { position: absolute; inset: 0; width: 100%; height: 100%; touch-action: 
       // portal
       if (this.portal) {
         const P = this.portal, a = this.t * 3;
-        ctx.save(); ctx.shadowColor = "#7ee0a1"; ctx.shadowBlur = 24;
-        ctx.strokeStyle = "#7ee0a1"; ctx.lineWidth = 3;
+        ctx.save(); ctx.shadowColor = "#7ee0a1"; ctx.shadowBlur = 24; ctx.strokeStyle = "#7ee0a1"; ctx.lineWidth = 3;
         for (let k = 0; k < 3; k++) { ctx.beginPath(); ctx.arc(P.x, P.y, 12 + k * 6, a + k, a + k + Math.PI * 1.3); ctx.stroke(); }
         ctx.restore();
       }
-      // fragmento
+      // gem
       if (this.esfera) {
         const pulse = 1 + Math.sin(this.t * 6) * 0.12;
         ctx.save(); ctx.shadowColor = "#7ee0a1"; ctx.shadowBlur = 18; ctx.fillStyle = "#7ee0a1";
@@ -460,7 +549,7 @@ canvas { position: absolute; inset: 0; width: 100%; height: 100%; touch-action: 
         ctx.beginPath(); ctx.moveTo(0, -9 * pulse); ctx.lineTo(7 * pulse, 0); ctx.lineTo(0, 9 * pulse); ctx.lineTo(-7 * pulse, 0); ctx.closePath(); ctx.fill();
         ctx.restore();
       }
-      // reloj
+      // clock
       if (this.reloj) {
         const R = this.reloj;
         ctx.globalAlpha = R.vida < 2 ? (Math.sin(this.t * 20) > 0 ? 1 : 0.3) : 1;
@@ -469,24 +558,27 @@ canvas { position: absolute; inset: 0; width: 100%; height: 100%; touch-action: 
         ctx.beginPath(); ctx.moveTo(R.x, R.y); ctx.lineTo(R.x, R.y - 6); ctx.moveTo(R.x, R.y); ctx.lineTo(R.x + 5, R.y); ctx.stroke();
         ctx.globalAlpha = 1;
       }
-      // sombras
+      // shadows (mine: violet with red eyes; rivals': outlined in their colour)
       for (const s of this.sombras) {
         if (s.x == null) continue;
+        const mia = s.owner === this.yo, col = mia ? "#5b4fb8" : s.owner.color;
         ctx.globalAlpha = 0.35 + 0.65 * s.nace;
-        ctx.fillStyle = "#05030d"; ctx.strokeStyle = this.congelado > 0 ? "#6ee7f9" : "#5b4fb8"; ctx.lineWidth = 2;
-        ctx.beginPath(); ctx.arc(s.x, s.y, this.yo.r + 1, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
-        ctx.fillStyle = this.congelado > 0 ? "#6ee7f9" : "#ff4d5e";
-        ctx.beginPath(); ctx.arc(s.x - 4, s.y - 2, 2, 0, Math.PI * 2); ctx.arc(s.x + 4, s.y - 2, 2, 0, Math.PI * 2); ctx.fill();
+        ctx.fillStyle = "#05030d"; ctx.strokeStyle = this.congelado > 0 ? "#6ee7f9" : col; ctx.lineWidth = 2;
+        ctx.beginPath(); ctx.arc(s.x, s.y, 13, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+        ctx.fillStyle = this.congelado > 0 ? "#6ee7f9" : (mia ? "#ff4d5e" : col);
+        if (mia) { ctx.beginPath(); ctx.arc(s.x - 4, s.y - 2, 2, 0, Math.PI * 2); ctx.arc(s.x + 4, s.y - 2, 2, 0, Math.PI * 2); ctx.fill(); }
+        else ctx.fillRect(s.x - 6, s.y - 3, 12, 3);
         ctx.globalAlpha = 1;
       }
-      // yo
-      ctx.save();
-      ctx.globalAlpha = this.invul > 0 && Math.sin(this.t * 30) > 0 ? 0.5 : 1;
-      ctx.shadowColor = "#f3efff"; ctx.shadowBlur = 20; ctx.fillStyle = "#f3efff";
-      ctx.beginPath(); ctx.arc(this.yo.x, this.yo.y, this.yo.r, 0, Math.PI * 2); ctx.fill(); ctx.restore();
-      ctx.fillStyle = "#120f24";
-      ctx.beginPath(); ctx.arc(this.yo.x - 4, this.yo.y - 2, 2, 0, Math.PI * 2); ctx.arc(this.yo.x + 4, this.yo.y - 2, 2, 0, Math.PI * 2); ctx.fill();
-      // escudos y recarga del impulso
+      // rivals
+      for (const b of this.bots) {
+        this.dibujarJugador(b, b.color, "visor");
+        ctx.fillStyle = b.color; ctx.font = "700 9px " + css("--ui"); ctx.textAlign = "center"; ctx.textBaseline = "alphabetic";
+        ctx.fillText(b.nombre, b.x, b.y - 17);
+      }
+      // me
+      ctx.save(); ctx.globalAlpha = this.invul > 0 && Math.sin(this.t * 30) > 0 ? 0.5 : 1;
+      this.dibujarJugador(this.yo, "#f3efff", "ojos"); ctx.restore();
       for (let k = 0; k < this.escudos; k++) {
         ctx.strokeStyle = "#6ee7f9"; ctx.lineWidth = 2;
         ctx.beginPath(); ctx.arc(this.yo.x, this.yo.y, this.yo.r + 6 + k * 4, 0, Math.PI * 2); ctx.stroke();
@@ -495,11 +587,21 @@ canvas { position: absolute; inset: 0; width: 100%; height: 100%; touch-action: 
         ctx.strokeStyle = "rgba(243,239,255,.5)"; ctx.lineWidth = 2;
         ctx.beginPath(); ctx.arc(this.yo.x, this.yo.y, this.yo.r + 4, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * (1 - this.dash / this.dashCD)); ctx.stroke();
       }
-      // progreso
-      ctx.fillStyle = "#a9a2cc"; ctx.font = "600 11px " + css("--ui"); ctx.textAlign = "right"; ctx.textBaseline = "alphabetic";
-      ctx.fillText(this.portal ? "Go to the portal!" : "Fragments " + this.recogidos + "/" + this.objetivo, W - 14, TOP + 2);
-      ctx.textAlign = "left";
-      ctx.fillText("Memory " + this.sala, 14, TOP + 2);
+      // progress
+      ctx.font = "600 11px " + css("--ui"); ctx.textBaseline = "alphabetic";
+      ctx.textAlign = "left"; ctx.fillStyle = "#a9a2cc";
+      ctx.fillText("Memory " + this.sala, 14, TOP + 16);
+      ctx.textAlign = "right";
+      if (this.portal) { ctx.fillStyle = "#7ee0a1"; ctx.fillText("Go to the portal!", W - 14, TOP + 16); }
+      else if (!this.bots.length) { ctx.fillStyle = "#a9a2cc"; ctx.fillText("Gems " + this.recogidos + "/" + this.objetivo, W - 14, TOP + 16); }
+      else {
+        // race scoreboard, drawn right-to-left
+        let x = W - 14;
+        const trozos = [["#a9a2cc", "  ·  " + (this.objetivo - this.aparecidas + (this.esfera ? 1 : 0)) + " left"]];
+        for (let i = this.bots.length - 1; i >= 0; i--) trozos.push([this.bots[i].color, "  " + this.bots[i].nombre + " " + this.bots[i].gems]);
+        trozos.push(["#f3efff", "You " + this.recogidos]);
+        for (const [c, txt] of trozos) { ctx.fillStyle = c; ctx.fillText(txt, x, TOP + 16); x -= ctx.measureText(txt).width; }
+      }
       pintarBanner(this.banner);
     },
   };
@@ -560,7 +662,7 @@ canvas { position: absolute; inset: 0; width: 100%; height: 100%; touch-action: 
     const frases = {
       atasco: "Planetary pile-up. Space traffic shows no mercy.",
       ascensor: "The tenants have called a building meeting. You lasted " + (juego.turno - 1) + " shifts.",
-      sombra: "Your past caught up with you. You reached memory " + juego.sala + ".",
+      sombra: (juego.motivo || "Your past caught up with you.") + " You reached memory " + juego.sala + ".",
     };
     setTimeout(() => {
       panel(juego, `<h3>${nuevo ? "New high score!" : "Game over"}</h3><p>${frases[juego.id]}</p>
