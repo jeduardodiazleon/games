@@ -14,12 +14,12 @@ window.GAMES = [
   {
     folder: "cosmic-traffic-jam",          // folder inside /games
     title: "Cosmic Traffic Jam",
-    description: "Planets share crossing orbits. Tap them to brake, time every release and avoid a cosmic pile-up.",
+    description: "Brake and reverse planets on crossing orbits to survive each stage, while meteors and a giant alien crash the party. Grab powers from passing spaceships.",
     color: "#ffb347",                    // accent color of the card
-    tags: ["Puzzle", "Reflex"],
-    controls: "Tap",
+    tags: ["Puzzle", "Reflex", "Survival"],
+    controls: "Tap · Double-tap",
     highScoreKey: "atasco",              // key the game uses to save its best score (optional)
-    version: "1.0",
+    version: "2.0",
     updated: "2026-11-20",
   },
   {
@@ -37,12 +37,12 @@ window.GAMES = [
   {
     folder: "my-shadow-hates-me",
     title: "My Shadow Hates Me",
-    description: "Your past mistakes chase you, repeating every step you took. Make your shadows collide and escape each memory.",
+    description: "Your past mistakes chase you, repeating every step you took. Collect the gems, outrace AI rivals and escape each memory.",
     color: "#9b8cff",
     tags: ["Action", "Survival"],
     controls: "Drag",
     highScoreKey: "sombra",
-    version: "1.0",
+    version: "2.0",
     updated: "2026-11-20",
   },
 ];
