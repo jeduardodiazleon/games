@@ -1,0 +1,29 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 400">
+  <defs>
+    <radialGradient id="bg" cx="50%" cy="45%" r="75%"><stop offset="0" stop-color="#2a1f5c"/><stop offset=".6" stop-color="#130e2a"/><stop offset="1" stop-color="#05030d"/></radialGradient>
+    <filter id="g" x="-80%" y="-80%" width="260%" height="260%"><feGaussianBlur stdDeviation="8" result="b"/><feMerge><feMergeNode in="b"/><feMergeNode in="SourceGraphic"/></feMerge></filter>
+  </defs>
+  <rect width="640" height="400" fill="url(#bg)"/>
+  <path d="M60 340 C120 120 260 120 330 220 S520 300 560 110" fill="none" stroke="#9b8cff" stroke-opacity=".18" stroke-width="16" stroke-linecap="round"/>
+  <path d="M90 90 C200 200 300 330 470 300" fill="none" stroke="#9b8cff" stroke-opacity=".12" stroke-width="14" stroke-linecap="round"/>
+  <!-- portal -->
+  <g filter="url(#g)" fill="none" stroke="#7ee0a1" stroke-width="4" stroke-linecap="round">
+    <path d="M560 82 a28 28 0 1 1 -20 8"/>
+    <path d="M560 70 a40 40 0 1 1 -30 12" opacity=".7"/>
+  </g>
+  <!-- fragmento -->
+  <path d="M470 220 l12 18 -12 18 -12 -18z" fill="#7ee0a1" filter="url(#g)"/>
+  <!-- reloj -->
+  <g stroke="#6ee7f9" stroke-width="3.5" fill="none" stroke-linecap="round"><circle cx="150" cy="300" r="15"/><path d="M150 300v-9M150 300h8"/></g>
+  <!-- sombras -->
+  <g stroke="#5b4fb8" stroke-width="3" fill="#05030d">
+    <circle cx="118" cy="232" r="22"/>
+    <circle cx="214" cy="160" r="22"/>
+    <circle cx="300" cy="205" r="22"/>
+  </g>
+  <g fill="#ff4d5e"><circle cx="111" cy="228" r="3.5"/><circle cx="125" cy="228" r="3.5"/><circle cx="207" cy="156" r="3.5"/><circle cx="221" cy="156" r="3.5"/><circle cx="293" cy="201" r="3.5"/><circle cx="307" cy="201" r="3.5"/></g>
+  <!-- yo -->
+  <circle cx="400" cy="250" r="22" fill="#f3efff" filter="url(#g)"/>
+  <g fill="#120f24"><circle cx="393" cy="246" r="3.5"/><circle cx="407" cy="246" r="3.5"/></g>
+  <circle cx="400" cy="250" r="32" fill="none" stroke="#6ee7f9" stroke-width="3" opacity=".8"/>
+</svg>

@@ -1,58 +1,81 @@
 <!doctype html>
-<html lang="es">
+<html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<title>Arcade de Bolsillo · Juegos</title>
-<meta name="description" content="Colección de minijuegos arcade para jugar en el navegador, en el móvil o en el ordenador.">
-<meta name="theme-color" content="#0a0716">
+<title>Pocket Arcade · Free browser games</title>
+<meta name="description" content="A collection of one-finger arcade games you can play instantly in your browser, on mobile or desktop.">
+<meta name="theme-color" content="#07050f">
 <link rel="icon" href="assets/favicon.svg" type="image/svg+xml">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bungee&family=Chakra+Petch:wght@400;500;600;700&family=Press+Start+2P&display=swap">
-<link rel="stylesheet" href="assets/estilo.css">
+<link rel="stylesheet" href="assets/style.css">
 </head>
 <body>
-  <div class="crt" aria-hidden="true"></div>
+<div class="crt" aria-hidden="true"></div>
 
-  <header class="hero">
-    <div class="cielo" aria-hidden="true">
-      <div class="sol"></div>
-      <div class="suelo"><div class="rejilla"></div></div>
+<nav class="nav">
+  <div class="wrap">
+    <a class="brand" href="./">
+      <svg viewBox="0 0 64 64" aria-hidden="true"><rect x="6" y="16" width="52" height="32" rx="10" fill="none" stroke="#ff3df2" stroke-width="5"/><path d="M20 27v10M15 32h10" stroke="#2ef2ff" stroke-width="5" stroke-linecap="round"/><circle cx="41" cy="29" r="3.5" fill="#ffd23f"/><circle cx="48" cy="35" r="3.5" fill="#ffd23f"/></svg>
+      POCKET <b>ARCADE</b>
+    </a>
+    <div class="nav-links"><a href="#featured">Featured</a><a href="#games">All games</a><a href="#how">How it works</a></div>
+    <a class="nav-cta" href="#games">PLAY NOW</a>
+  </div>
+</nav>
+
+<header class="hero">
+  <div class="sky" aria-hidden="true"><div class="sun"></div><div class="floor"><div class="grid"></div></div></div>
+  <div class="hero-in">
+    <p class="coin">● INSERT COIN ●</p>
+    <h1>POCKET <span>ARCADE</span></h1>
+    <p class="lead">One-finger arcade games for your phone and your desktop. No downloads, no sign-ups — pick a cartridge and hit play.</p>
+    <div class="hero-actions">
+      <a class="btn-start" href="#games">PRESS START</a>
+      <a class="btn-ghost" href="#featured">Featured game</a>
     </div>
+  </div>
+  <div class="stats">
+    <div class="stat"><b id="statGames">0</b><small>GAMES</small></div>
+    <div class="stat"><b id="statScore">0</b><small>YOUR TOTAL SCORE</small></div>
+    <div class="stat"><b>100%</b><small>FREE</small></div>
+  </div>
+</header>
 
-    <nav class="barra">
-      <a class="logo" href="./" aria-label="Inicio">
-        <span class="logo-ico">▲</span> ADB
-      </a>
-      <div class="hud-top">
-        <span><small>JUEGOS</small><b id="statJuegos">0</b></span>
-        <span><small>PUNTOS TOTALES</small><b id="statPuntos">0</b></span>
-      </div>
-    </nav>
+<main class="wrap">
+  <section id="featured" hidden>
+    <div class="head"><h2><span class="idx">01</span> Featured</h2></div>
+    <div id="featuredSlot"></div>
+  </section>
 
-    <div class="hero-txt">
-      <p class="insert">● INSERT COIN ●</p>
-      <h1 class="titulo" data-texto="ARCADE DE BOLSILLO">ARCADE DE <span>BOLSILLO</span></h1>
-      <p class="sub">Minijuegos de un dedo para el móvil y el ordenador. Sin descargas, sin registro: elige un cartucho y dale a jugar.</p>
-      <a class="press" href="#juegos">PRESS START</a>
+  <section id="games">
+    <div class="head">
+      <h2><span class="idx">02</span> All games</h2>
+      <div class="filters" id="filters" role="group" aria-label="Filter by genre"></div>
     </div>
-  </header>
+    <div class="cards" id="cards"></div>
+  </section>
 
-  <main id="juegos" class="seccion">
-    <div class="seccion-cab">
-      <h2><span class="num">01</span> Selecciona tu juego</h2>
-      <div class="filtros" id="filtros" role="group" aria-label="Filtrar por género"></div>
+  <section id="how">
+    <div class="head"><h2><span class="idx">03</span> How it works</h2></div>
+    <div class="how">
+      <div class="step"><span>01</span><h4>Pick a game</h4><p>Every game runs right in your browser. Nothing to install.</p></div>
+      <div class="step"><span>02</span><h4>Play anywhere</h4><p>Designed for one finger on mobile, and works with a mouse on desktop.</p></div>
+      <div class="step"><span>03</span><h4>Beat your best</h4><p>High scores are saved on this device and add up to your total score.</p></div>
     </div>
-    <div class="rejilla-juegos" id="lista"></div>
-  </main>
+  </section>
+</main>
 
-  <footer class="pie">
-    <p><span class="pix">GAME OVER?</span> Nunca. Vuelve pronto: llegan juegos nuevos.</p>
-    <p class="mini">Tus récords se guardan solo en este navegador.</p>
-  </footer>
+<footer>
+  <div class="wrap">
+    <p><span class="pix">GAME OVER?</span>Never. New cartridges are on the way.</p>
+    <p>High scores are stored only in this browser.</p>
+  </div>
+</footer>
 
-  <script src="juegos.js"></script>
-  <script src="assets/portal.js"></script>
+<script src="catalog.js"></script>
+<script src="assets/portal.js"></script>
 </body>
 </html>

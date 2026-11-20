@@ -1,0 +1,528 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Cosmic Traffic Jam · Pocket Arcade</title>
+<link rel="icon" href="../../assets/favicon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Alfa+Slab+One&family=Bungee&family=Chakra+Petch:wght@400;600;700&family=Limelight&family=Special+Elite&display=swap">
+<style>
+body{margin:0;padding:0}
+/* Layout: una sola pantalla de juego a sangre; menú de tres cartuchos apilados en móvil, en fila en escritorio. */
+:root {
+  color-scheme: dark;
+  --noche: #120f24;
+  --noche-2: #1c1836;
+  --tinta: #f3efff;
+  --tinta-2: #a9a2cc;
+  --orbita: #ffb347;   /* Atasco Cósmico */
+  --infierno: #ff4d5e; /* Ascensor del Infierno */
+  --sombra: #9b8cff;   /* Mi Sombra Me Odia */
+  --borde: #2d2852;
+  --display: "Bungee", "Impact", "Arial Black", sans-serif;
+  --ui: "Chakra Petch", "Trebuchet MS", system-ui, sans-serif;
+}
+[hidden] { display: none !important; }
+html, body { height: 100%; }
+body {
+  background: var(--noche);
+  color: var(--tinta);
+  font-family: var(--ui);
+  overflow: hidden;
+  -webkit-user-select: none; user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+#app { position: relative; height: 100%; overflow: hidden; }
+canvas { position: absolute; inset: 0; width: 100%; height: 100%; touch-action: none; display: block; }
+
+/* ---------- Menú ---------- */
+#menu {
+  position: absolute; inset: 0; overflow-y: auto;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 28px 24px;
+  background:
+    radial-gradient(120% 60% at 50% -10%, #2a1f5c 0%, transparent 60%),
+    var(--noche);
+}
+.menu-inner { max-width: 980px; margin: 0 auto; display: flex; flex-direction: column; gap: 22px; }
+.marca { display: flex; flex-direction: column; gap: 6px; }
+.marca h1 { font-family: var(--display); font-weight: 400; font-size: clamp(30px, 8vw, 54px); line-height: 1; margin: 0; letter-spacing: .5px; text-wrap: balance; }
+.marca h1 span { color: var(--orbita); }
+.marca p { margin: 0; color: var(--tinta-2); font-size: 15px; max-width: 52ch; }
+.cartuchos { display: grid; grid-template-columns: 1fr; gap: 14px; }
+@media (min-width: 760px) { .cartuchos { grid-template-columns: repeat(3, 1fr); } }
+.cartucho {
+  --c: var(--orbita);
+  position: relative; text-align: left; cursor: pointer;
+  display: grid; grid-template-columns: 76px 1fr; gap: 14px; align-items: center;
+  padding: 14px; border-radius: 14px;
+  background: var(--noche-2); color: var(--tinta);
+  border: 1px solid var(--borde);
+  font: inherit;
+  transition: transform .15s ease, border-color .15s ease;
+}
+.cartucho:hover, .cartucho:focus-visible { border-color: var(--c); transform: translateY(-2px); outline: none; }
+.cartucho:focus-visible { box-shadow: 0 0 0 3px color-mix(in srgb, var(--c) 40%, transparent); }
+.cartucho canvas { position: static; width: 76px; height: 76px; border-radius: 10px; background: #0b0918; touch-action: auto; }
+.cartucho h2 { font-family: var(--display); font-weight: 400; font-size: 19px; margin: 0 0 4px; color: var(--c); line-height: 1.1; }
+.cartucho p { margin: 0; color: var(--tinta-2); font-size: 14px; line-height: 1.35; }
+.cartucho .record { margin-top: 6px; font-size: 12px; letter-spacing: .08em; text-transform: uppercase; color: var(--tinta-2); font-variant-numeric: tabular-nums; }
+.cartucho .record b { color: var(--tinta); }
+.pie { color: var(--tinta-2); font-size: 12px; }
+
+/* ---------- HUD ---------- */
+#hud {
+  position: absolute; top: 0; left: 0; right: 0; z-index: 5;
+  display: flex; align-items: center; gap: 10px;
+  padding-top: 10px; padding-bottom: 8px;
+  padding-left: max(12px, env(safe-area-inset-left, 0px));
+  padding-right: max(12px, env(safe-area-inset-right, 0px));
+  pointer-events: none;
+}
+#hud > * { pointer-events: auto; }
+.btn-hud {
+  font: 600 14px var(--ui); color: var(--tinta); background: rgba(28,24,54,.8);
+  border: 1px solid var(--borde); border-radius: 10px; padding: 8px 12px; cursor: pointer;
+}
+.btn-hud:focus-visible { outline: 2px solid var(--tinta); }
+#hudTitulo { flex: 1; min-width: 0; font-family: var(--display); font-size: 15px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+#hudPuntos { font: 700 22px var(--ui); font-variant-numeric: tabular-nums; min-width: 2ch; text-align: right; }
+#hudVidas { font-size: 16px; letter-spacing: 2px; }
+
+/* ---------- Overlay ---------- */
+#overlay {
+  position: absolute; inset: 0; z-index: 8;
+  display: grid; place-items: center;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 16px;
+  background: rgba(10, 8, 22, .72);
+  backdrop-filter: blur(3px);
+}
+.panel {
+  --c: var(--orbita);
+  width: min(420px, 100%); background: var(--noche-2); border: 1px solid var(--borde);
+  border-top: 4px solid var(--c); border-radius: 14px; padding: 22px 20px 20px;
+  display: flex; flex-direction: column; gap: 12px;
+}
+.panel h3 { font-family: var(--display); font-weight: 400; font-size: 26px; margin: 0; color: var(--c); line-height: 1.05; text-wrap: balance; }
+.panel p { margin: 0; color: var(--tinta-2); font-size: 15px; line-height: 1.45; }
+.panel ul { margin: 0; padding-left: 18px; color: var(--tinta); font-size: 15px; line-height: 1.5; display: grid; gap: 4px; }
+.marcador { display: flex; gap: 24px; font-variant-numeric: tabular-nums; }
+.marcador div { display: flex; flex-direction: column; }
+.marcador small { font-size: 11px; letter-spacing: .1em; text-transform: uppercase; color: var(--tinta-2); }
+.marcador strong { font: 700 34px var(--ui); }
+.botones { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 4px; }
+.btn {
+  font: 700 16px var(--ui); border-radius: 10px; padding: 12px 18px; cursor: pointer; border: 0;
+  background: var(--c); color: #160f06; flex: 1;
+}
+.btn.sec { background: transparent; color: var(--tinta); border: 1px solid var(--borde); }
+.btn:focus-visible { outline: 3px solid var(--tinta); outline-offset: 2px; }
+.panel .intro { color: var(--tinta); font-style: italic; border-left: 3px solid var(--c); padding-left: 10px; }
+.panel ul b { color: var(--c); font-weight: 700; }
+.mejoras { display: grid; gap: 8px; }
+.mejora {
+  display: flex; flex-direction: column; gap: 2px; text-align: left; cursor: pointer;
+  font: inherit; color: var(--tinta); background: #15122b; border: 1px solid var(--borde);
+  border-radius: 10px; padding: 12px 14px;
+}
+.mejora b { font: 700 16px var(--ui); color: var(--c); }
+.mejora span { color: var(--tinta-2); font-size: 14px; }
+.mejora:hover, .mejora:focus-visible { border-color: var(--c); outline: none; }
+.panel { max-height: calc(100% - 8px); overflow-y: auto; }
+/* ---------- Tema "años 30" del Ascensor ---------- */
+#app.retro #hud .btn-hud { background: #f8eed6; color: #1d1510; border: 2px solid #1d1510; font-family: "Special Elite", monospace; }
+#app.retro #hudTitulo { font-family: "Limelight", serif; color: #1d1510 !important; }
+#app.retro #hudPuntos { font-family: "Alfa Slab One", serif; color: #b8412f; font-weight: 400; }
+#app.retro #hudVidas { color: #b8412f !important; }
+#app.retro #overlay { background: rgba(40, 25, 10, .55); }
+.panel.retro { background: #f8eed6; color: #1d1510; border: 2.5px solid #1d1510; border-top: 6px solid #b8412f; }
+.panel.retro h3 { font-family: "Limelight", serif; color: #b8412f; }
+.panel.retro p, .panel.retro .marcador small { color: #5a4636; font-family: "Special Elite", monospace; }
+.panel.retro .intro { color: #1d1510; border-left-color: #b8412f; }
+.panel.retro ul { color: #1d1510; }
+.panel.retro ul b { color: #b8412f; }
+.panel.retro .marcador strong { font-family: "Alfa Slab One", serif; font-weight: 400; color: #1d1510; }
+.panel.retro .btn { background: #b8412f; color: #f8eed6; font-family: "Alfa Slab One", serif; font-weight: 400; letter-spacing: .03em; border: 2px solid #1d1510; }
+.panel.retro .btn.sec { background: transparent; color: #1d1510; }
+.panel.retro .mejora { background: #f1e3c2; border: 2px solid #1d1510; color: #1d1510; }
+.panel.retro .mejora b { font-family: "Alfa Slab One", serif; font-weight: 400; color: #b8412f; }
+.panel.retro .mejora span { color: #5a4636; font-family: "Special Elite", monospace; }
+.panel.retro .mejora:hover, .panel.retro .mejora:focus-visible { border-color: #b8412f; }
+@media (prefers-reduced-motion: reduce) { .cartucho { transition: none; } }
+</style>
+</head>
+<body>
+<div id="app">
+  <canvas id="juego" aria-label="Game area"></canvas>
+
+  <div id="hud" hidden>
+    <button class="btn-hud" id="btnMenu" type="button">‹ Arcade</button>
+    <div id="hudTitulo"></div>
+    <div id="hudVidas" aria-label="Lives"></div>
+    <div id="hudPuntos" aria-live="off">0</div>
+    <button class="btn-hud" id="btnPausa" type="button" aria-label="Pause">❚❚</button>
+  </div>
+
+  <div id="overlay" hidden>
+    <div class="panel" id="panel"></div>
+  </div>
+
+  <div id="menu" hidden></div>
+</div>
+
+<script>
+(() => {
+  "use strict";
+
+  // ===================== Utilidades =====================
+  const $ = (id) => document.getElementById(id);
+  const cv = $("juego"), ctx = cv.getContext("2d");
+  let W = 0, H = 0, DPR = 1;
+  const TOP = 58; // alto reservado al HUD
+
+  function resize() {
+    DPR = Math.min(window.devicePixelRatio || 1, 2);
+    const r = cv.getBoundingClientRect();
+    W = r.width; H = r.height;
+    cv.width = Math.round(W * DPR); cv.height = Math.round(H * DPR);
+    ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+    if (juego && juego.onResize) juego.onResize();
+  }
+  const rnd = (a, b) => a + Math.random() * (b - a);
+  const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+  const dist = (a, b) => Math.hypot(a.x - b.x, a.y - b.y);
+  const css = (v) => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
+
+  const store = {
+    get(k) { try { return Number(localStorage.getItem("arcade_" + k)) || 0; } catch (e) { return 0; } },
+    set(k, v) { try { localStorage.setItem("arcade_" + k, String(v)); } catch (e) {} },
+  };
+
+  // Estrellas de fondo compartidas
+  let estrellas = [];
+  function genEstrellas() {
+    estrellas = Array.from({ length: 90 }, () => ({ x: Math.random(), y: Math.random(), r: Math.random() * 1.3 + .2, a: Math.random() * .6 + .2 }));
+  }
+  function pintarEstrellas(alpha = 1) {
+    ctx.save();
+    for (const s of estrellas) {
+      ctx.globalAlpha = s.a * alpha;
+      ctx.fillStyle = "#cfc8ff";
+      ctx.beginPath(); ctx.arc(s.x * W, s.y * H, s.r, 0, Math.PI * 2); ctx.fill();
+    }
+    ctx.restore();
+  }
+
+  // Textos flotantes (+1, etc.)
+  let flotantes = [];
+  function flotar(x, y, txt, color) { flotantes.push({ x, y, txt, color, t: 0 }); }
+  function pintarFlotantes(dt) {
+    ctx.save();
+    ctx.textAlign = "center"; ctx.font = "700 16px " + css("--ui");
+    flotantes = flotantes.filter((f) => (f.t += dt) < 0.9);
+    for (const f of flotantes) {
+      ctx.globalAlpha = 1 - f.t / 0.9;
+      ctx.fillStyle = f.color;
+      const mitad = ctx.measureText(f.txt).width / 2 + 8;
+      ctx.fillText(f.txt, clamp(f.x, mitad, W - mitad), f.y - f.t * 40);
+    }
+    ctx.restore();
+  }
+
+  // Partículas de explosión
+  let chispas = [];
+  function explotar(x, y, color, n = 36) {
+    for (let i = 0; i < n; i++) {
+      const a = Math.random() * Math.PI * 2, v = rnd(60, 260);
+      chispas.push({ x, y, vx: Math.cos(a) * v, vy: Math.sin(a) * v, t: 0, life: rnd(.5, 1.1), color });
+    }
+  }
+  function pintarChispas(dt) {
+    chispas = chispas.filter((c) => (c.t += dt) < c.life);
+    for (const c of chispas) {
+      c.x += c.vx * dt; c.y += c.vy * dt; c.vx *= .97; c.vy *= .97;
+      ctx.globalAlpha = 1 - c.t / c.life;
+      ctx.fillStyle = c.color;
+      ctx.fillRect(c.x - 2, c.y - 2, 4, 4);
+    }
+    ctx.globalAlpha = 1;
+  }
+
+  // ===================== JUEGO 1: Atasco Cósmico =====================
+  const Atasco = {
+    id: "atasco", nombre: "Cosmic Traffic Jam", color: "--orbita",
+    desc: "Planets share crossing orbits. Tap them to brake and avoid collisions.",
+    reglas: [
+      "Tap a planet to brake it. Tap it again to release it.",
+      "A braked planet gets impatient and takes off on its own after 3 seconds.",
+      "Every full lap scores 1 point.",
+      "More planets keep arriving and more orbits open up.",
+    ],
+    init() {
+      this.puntos = 0; this.vidas = null; this.t = 0; this.over = false;
+      this.planetas = []; this.siguiente = 4;
+      this.colores = ["#ffb347", "#6ee7f9", "#f472b6", "#a3e635", "#c4b5fd", "#fde047", "#fb7185", "#5eead4"];
+      this.onResize();
+      this.nuevoPlaneta(0, 0); this.nuevoPlaneta(1, Math.PI);
+    },
+    onResize() {
+      const cx = W / 2, cy = TOP + (H - TOP) / 2;
+      const m = Math.min(W, H - TOP);
+      const R = m * 0.27;
+      this.orbitas = [
+        { x: cx - R * 0.55, y: cy - R * 0.25, r: R },
+        { x: cx + R * 0.55, y: cy - R * 0.25, r: R },
+        { x: cx, y: cy + R * 0.55, r: R * 0.85 },
+        { x: cx, y: cy - R * 0.2, r: R * 1.55 },
+        { x: cx, y: cy - R * 0.85, r: R * 0.6 },
+      ];
+    },
+    activas() { return Math.min(this.orbitas.length, 2 + Math.floor(this.puntos / 6)); },
+    pos(p) { const o = this.orbitas[p.o]; return { x: o.x + Math.cos(p.a) * o.r, y: o.y + Math.sin(p.a) * o.r }; },
+    nuevoPlaneta(o, a) {
+      const dir = Math.random() < .5 ? 1 : -1;
+      const p = { o, a, dir, frenado: false, espera: 0, recorrido: 0, r: 11, color: this.colores[this.planetas.length % this.colores.length], nace: 0 };
+      this.planetas.push(p);
+      return p;
+    },
+    intentarNacer() {
+      const n = this.activas();
+      for (let intento = 0; intento < 30; intento++) {
+        const o = Math.floor(Math.random() * n), a = rnd(0, Math.PI * 2);
+        const prueba = { o, a };
+        const P = this.pos(prueba);
+        if (this.planetas.every((q) => dist(P, this.pos(q)) > 80)) { this.nuevoPlaneta(o, a); return; }
+      }
+    },
+    velocidad() { return 62 + Math.min(60, this.t * 0.6); },
+    update(dt) {
+      this.t += dt;
+      this.siguiente -= dt;
+      if (this.siguiente <= 0 && this.planetas.length < 14) {
+        this.intentarNacer();
+        this.siguiente = Math.max(3.2, 7 - this.t * 0.04);
+      }
+      const v = this.velocidad();
+      for (const p of this.planetas) {
+        p.nace = Math.min(1, p.nace + dt * 2);
+        if (p.frenado) {
+          p.espera += dt;
+          if (p.espera >= 3) { p.frenado = false; p.espera = 0; const P = this.pos(p); flotar(P.x, P.y - 16, "go!", "#ff8a8a"); }
+          continue;
+        }
+        const w = v / this.orbitas[p.o].r;
+        p.a += w * p.dir * dt;
+        p.recorrido += w * dt;
+        if (p.recorrido >= Math.PI * 2) {
+          p.recorrido -= Math.PI * 2;
+          this.puntos++;
+          const P = this.pos(p); flotar(P.x, P.y - 16, "+1", p.color);
+        }
+      }
+      // Choques
+      for (let i = 0; i < this.planetas.length; i++) for (let j = i + 1; j < this.planetas.length; j++) {
+        const a = this.planetas[i], b = this.planetas[j];
+        if (a.nace < 1 || b.nace < 1) continue;
+        const A = this.pos(a), B = this.pos(b);
+        if (dist(A, B) < a.r + b.r - 2) {
+          explotar((A.x + B.x) / 2, (A.y + B.y) / 2, a.color, 30);
+          explotar((A.x + B.x) / 2, (A.y + B.y) / 2, b.color, 30);
+          this.over = true;
+        }
+      }
+    },
+    onDown(x, y) {
+      let mejor = null, md = 40;
+      for (const p of this.planetas) { const d = dist({ x, y }, this.pos(p)); if (d < md) { md = d; mejor = p; } }
+      if (mejor) { mejor.frenado = !mejor.frenado; mejor.espera = 0; }
+    },
+    draw() {
+      const n = this.activas();
+      // Sol
+      const cx = W / 2, cy = TOP + (H - TOP) / 2;
+      const g = ctx.createRadialGradient(cx, cy, 0, cx, cy, 60);
+      g.addColorStop(0, "rgba(255,179,71,.18)"); g.addColorStop(1, "rgba(255,179,71,0)");
+      ctx.fillStyle = g; ctx.beginPath(); ctx.arc(cx, cy, 60, 0, Math.PI * 2); ctx.fill();
+      // Órbitas
+      ctx.lineWidth = 2;
+      this.orbitas.forEach((o, i) => {
+        ctx.setLineDash(i < n ? [6, 8] : [2, 10]);
+        ctx.strokeStyle = i < n ? "rgba(169,162,204,.45)" : "rgba(169,162,204,.08)";
+        ctx.beginPath(); ctx.arc(o.x, o.y, o.r, 0, Math.PI * 2); ctx.stroke();
+      });
+      ctx.setLineDash([]);
+      // Planetas
+      for (const p of this.planetas) {
+        const P = this.pos(p), r = p.r * (0.4 + 0.6 * p.nace);
+        ctx.save();
+        ctx.shadowColor = p.color; ctx.shadowBlur = 16;
+        ctx.fillStyle = p.color;
+        ctx.beginPath(); ctx.arc(P.x, P.y, r, 0, Math.PI * 2); ctx.fill();
+        ctx.restore();
+        // dirección
+        ctx.fillStyle = "rgba(18,15,36,.6)";
+        const o = this.orbitas[p.o], ang = p.a + p.dir * 0.0001;
+        const tx = -Math.sin(ang) * p.dir, ty = Math.cos(ang) * p.dir;
+        ctx.beginPath(); ctx.arc(P.x + tx * 4, P.y + ty * 4, 3, 0, Math.PI * 2); ctx.fill();
+        if (p.frenado) {
+          ctx.strokeStyle = "#ff5f6d"; ctx.lineWidth = 3;
+          ctx.beginPath(); ctx.arc(P.x, P.y, r + 6, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * (1 - p.espera / 3)); ctx.stroke();
+        }
+      }
+    },
+  };
+
+  function pintarBanner(b) {
+    if (!b) return;
+    const a = b.t < 0.3 ? b.t / 0.3 : b.t > 2 ? Math.max(0, 1 - (b.t - 2) / 0.5) : 1;
+    ctx.save();
+    ctx.globalAlpha = a;
+    ctx.font = "400 " + (W < 420 ? 15 : 19) + "px " + css("--display");
+    ctx.textAlign = "center"; ctx.textBaseline = "middle";
+    const w = Math.min(W - 24, ctx.measureText(b.txt).width + 28);
+    ctx.fillStyle = "rgba(10,8,22,.75)";
+    ctx.beginPath(); ctx.roundRect(W / 2 - w / 2, TOP + 26, w, 36, 10); ctx.fill();
+    ctx.fillStyle = b.color;
+    ctx.fillText(b.txt, W / 2, TOP + 45, W - 40);
+    ctx.restore();
+  }
+
+  const JUEGOS = [Atasco];
+
+  // ===================== Control de partida =====================
+  let juego = null, estado = "menu"; // menu | intro | jugando | pausa | fin
+
+  function abrir(j) {
+    juego = j; estado = "intro";
+    $("app").classList.toggle("retro", !!j.retro);
+    $("menu").hidden = true; $("hud").hidden = false;
+    $("hudTitulo").textContent = j.nombre;
+    $("hudTitulo").style.color = "var(" + j.color + ")";
+    flotantes = []; chispas = [];
+    juego.init();
+    actualizarHud();
+    const ul = j.reglas.map((r) => "<li>" + r + "</li>").join("");
+    panel(j, `<h3>${j.nombre}</h3>${j.intro ? `<p class="intro">${j.intro}</p>` : ""}<ul>${ul}</ul>
+      <div class="botones"><button class="btn" id="bJugar" type="button">Play</button></div>`);
+    $("bJugar").onclick = empezar; $("bJugar").focus();
+  }
+  function empezar() { juego.init(); flotantes = []; chispas = []; estado = "jugando"; $("overlay").hidden = true; actualizarHud(); }
+  function panel(j, html) {
+    const p = $("panel"); p.style.setProperty("--c", "var(" + j.color + ")"); p.innerHTML = html;
+    p.classList.toggle("retro", !!j.retro);
+    $("overlay").hidden = false;
+  }
+  function pausar() {
+    if (estado !== "jugando") return;
+    estado = "pausa";
+    panel(juego, `<h3>Paused</h3><p>Score: ${juego.puntos}</p>
+      <div class="botones"><button class="btn" id="bSeguir" type="button">Resume</button>
+      <button class="btn sec" id="bSalir" type="button">Arcade</button></div>`);
+    $("bSeguir").onclick = () => { estado = "jugando"; $("overlay").hidden = true; };
+    $("bSalir").onclick = menu; $("bSeguir").focus();
+  }
+  function fin() {
+    estado = "fin";
+    const rec = store.get(juego.id), nuevo = juego.puntos > rec;
+    if (nuevo) store.set(juego.id, juego.puntos);
+    const frases = {
+      atasco: "Planetary pile-up. Space traffic shows no mercy.",
+      ascensor: "The tenants have called a building meeting. You lasted " + (juego.turno - 1) + " shifts.",
+      sombra: "Your past caught up with you. You reached memory " + juego.sala + ".",
+    };
+    setTimeout(() => {
+      panel(juego, `<h3>${nuevo ? "New high score!" : "Game over"}</h3><p>${frases[juego.id]}</p>
+        <div class="marcador"><div><small>Score</small><strong>${juego.puntos}</strong></div>
+        <div><small>Best</small><strong>${Math.max(rec, juego.puntos)}</strong></div></div>
+        <div class="botones"><button class="btn" id="bOtra" type="button">Play again</button>
+        <button class="btn sec" id="bMenu2" type="button">Arcade</button></div>`);
+      $("bOtra").onclick = empezar; $("bMenu2").onclick = menu; $("bOtra").focus();
+    }, 650);
+  }
+  function mostrarMejoras() {
+    const m = juego.mejoraPendiente; juego.mejoraPendiente = null;
+    estado = "mejora";
+    const botones = m.opciones.map((o, i) =>
+      `<button class="mejora" id="mej${i}" type="button"><b>${o.t}</b><span>${o.d}</span></button>`).join("");
+    panel(juego, `<h3>${m.titulo}</h3><p>${m.texto}</p><div class="mejoras">${botones}</div>`);
+    m.opciones.forEach((o, i) => {
+      $("mej" + i).onclick = () => {
+        o.f();
+        if (juego.trasMejora) { juego.trasMejora(); juego.trasMejora = null; }
+        estado = "jugando"; $("overlay").hidden = true; actualizarHud();
+      };
+    });
+    $("mej0").focus();
+  }
+  function menu() { location.href = "../../index.html"; }
+  function actualizarHud() {
+    if (!juego) return;
+    $("hudPuntos").textContent = juego.puntos;
+    $("hudVidas").textContent = juego.vidas == null ? "" : "♥".repeat(Math.max(0, juego.vidas)) + "♡".repeat(Math.max(0, 3 - juego.vidas));
+    $("hudVidas").style.color = "var(--infierno)";
+  }
+  $("btnMenu").onclick = menu;
+  $("btnPausa").onclick = pausar;
+  document.addEventListener("visibilitychange", () => { if (document.hidden) pausar(); });
+
+  // ===================== Entrada =====================
+  let puntero = null;
+  cv.addEventListener("pointerdown", (e) => {
+    if (estado !== "jugando") return;
+    const r = cv.getBoundingClientRect();
+    puntero = { id: e.pointerId, x: e.clientX - r.left, y: e.clientY - r.top };
+    try { cv.setPointerCapture(e.pointerId); } catch (_) {}
+    juego.onDown && juego.onDown(puntero.x, puntero.y);
+    e.preventDefault();
+  });
+  cv.addEventListener("pointermove", (e) => {
+    if (estado !== "jugando" || !puntero || e.pointerId !== puntero.id) return;
+    const r = cv.getBoundingClientRect();
+    const x = e.clientX - r.left, y = e.clientY - r.top;
+    juego.onMove && juego.onMove(x, y, x - puntero.x, y - puntero.y);
+    puntero.x = x; puntero.y = y;
+  });
+  const soltar = () => { puntero = null; };
+  cv.addEventListener("pointerup", soltar); cv.addEventListener("pointercancel", soltar);
+  window.addEventListener("keydown", (e) => {
+    if (e.key === "Escape" || e.key === "p") { estado === "jugando" ? pausar() : null; }
+    if (juego && juego.teclas) juego.teclas[e.key] = true;
+  });
+  window.addEventListener("keyup", (e) => { if (juego && juego.teclas) juego.teclas[e.key] = false; });
+
+  // ===================== Bucle =====================
+  let ultimo = performance.now();
+  function bucle(ahora) {
+    const dt = Math.min(0.05, (ahora - ultimo) / 1000); ultimo = ahora;
+    ctx.fillStyle = css("--noche"); ctx.fillRect(0, 0, W, H);
+    if (estado === "menu") { requestAnimationFrame(bucle); return; }
+    if (!juego.retro) pintarEstrellas(1);
+    if (estado === "jugando") {
+      juego.update(dt);
+      actualizarHud();
+      if (juego.over) fin();
+      else if (juego.mejoraPendiente) mostrarMejoras();
+    }
+    juego.draw();
+    pintarChispas(estado === "pausa" ? 0 : dt);
+    pintarFlotantes(estado === "pausa" ? 0 : dt);
+    requestAnimationFrame(bucle);
+  }
+
+  function arrancar() {
+    genEstrellas(); resize();
+    window.addEventListener("resize", resize);
+    requestAnimationFrame(bucle);
+    abrir(JUEGOS[0]);
+  }
+
+  arrancar();
+})();
+</script>
+</body>
+</html>

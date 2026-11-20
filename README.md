@@ -1,58 +1,57 @@
-# 🕹️ Arcade de Bolsillo
+# 🕹️ Pocket Arcade
 
-Colección de minijuegos para el navegador. Web: **https://jeduardodiazleon.github.io/games/**
+One-finger arcade games for the browser. Live site: **https://jeduardodiazleon.github.io/games/**
 
-## Estructura
+## Structure
 
 ```
-games/
-├── index.html            ← portal (no hace falta tocarlo)
-├── juegos.js             ← CATÁLOGO: lista de juegos que aparecen en el portal
-├── .nojekyll             ← le dice a GitHub Pages que sirva los archivos tal cual
+├── index.html            ← portal page (no need to edit)
+├── catalog.js            ← GAME CATALOG: the list of games shown on the portal
+├── .nojekyll             ← tells GitHub Pages to serve files as they are
 ├── assets/
-│   ├── estilo.css        ← diseño del portal
-│   ├── portal.js         ← lógica del portal
+│   ├── style.css         ← portal design
+│   ├── portal.js         ← portal logic
 │   └── favicon.svg
-└── juegos/
-    ├── atasco-cosmico/
-    │   ├── index.html    ← el juego (archivo autónomo)
-    │   └── portada.svg   ← imagen de la tarjeta
-    ├── ascensor-del-infierno/
-    └── mi-sombra-me-odia/
+└── games/
+    ├── cosmic-traffic-jam/
+    │   ├── index.html    ← the game (one self-contained file)
+    │   └── cover.svg     ← card image
+    ├── hells-elevator/
+    └── my-shadow-hates-me/
 ```
 
-## Actualizar un juego
+## Update a game
 
-1. Sustituye `juegos/<carpeta>/index.html` por la nueva versión.
-2. (Opcional) En `juegos.js` sube la `version` y pon la fecha de hoy en `actualizado`. Durante 3 semanas la tarjeta mostrará el sello **ACTUALIZADO**.
+1. In GitHub, open `games/<folder>/`, click **Add file → Upload files**, drop the new `index.html` and commit. It replaces the old one.
+2. Optional: in `catalog.js`, bump `version` and set `updated` to today's date. The card shows an **UPDATED** badge for 3 weeks.
 
-## Añadir un juego nuevo
+## Add a new game
 
-1. Crea la carpeta `juegos/mi-juego-nuevo/` con:
-   - `index.html` → el juego (cualquier HTML autónomo vale).
-   - `portada.svg` o `portada.png` → imagen 16:10 (por ejemplo 640×400). Si no hay, se muestra la inicial del juego.
-2. Añade un bloque al final de la lista en `juegos.js`:
+1. Create `games/my-new-game/` with:
+   - `index.html` → the game (any self-contained HTML game works).
+   - `cover.svg`, `cover.png` or `cover.jpg` → 16:10 image (e.g. 640×400). Without one, the card shows the title's first letter.
+2. Add a block at the end of the list in `catalog.js`:
 
 ```js
   {
-    carpeta: "mi-juego-nuevo",
-    titulo: "Mi Juego Nuevo",
-    descripcion: "Una frase que enganche.",
+    folder: "my-new-game",
+    title: "My New Game",
+    description: "One catchy sentence.",
     color: "#2ef2ff",
-    etiquetas: ["Acción"],
-    controles: "Toque",
-    record: "mijuego",        // opcional: clave de récord (ver abajo)
+    tags: ["Action"],
+    controls: "Tap",
     version: "1.0",
-    actualizado: "2026-12-01",
+    updated: "2026-12-01",
   },
 ```
 
-3. Para que el juego tenga botón de volver al portal, enlaza a `../../index.html`.
+3. For a back button to the portal, link the game to `../../index.html`.
+4. Add `featured: true` to one game to put it in the big spotlight banner.
 
-### Récords en el portal (opcional)
+### High scores on the portal (optional)
 
-Si el juego guarda su récord con `localStorage.setItem("arcade_" + clave, puntos)`, el portal lo muestra en la tarjeta y lo suma a los puntos totales. Pon esa misma `clave` en el campo `record`.
+If the game saves its best score with `localStorage.setItem("arcade_" + key, score)`, set `highScoreKey: "key"`. The portal shows it on the card and adds it to the total score.
 
-## Probar en local
+## Test locally
 
-Abre `index.html` con doble clic: funciona sin servidor.
+Double-click `index.html`. It works without a server.

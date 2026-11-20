@@ -1,0 +1,65 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 400">
+  <defs>
+    <pattern id="rayas" width="14" height="14" patternUnits="userSpaceOnUse"><rect width="4" height="14" fill="#1d1510" opacity=".15"/></pattern>
+    <pattern id="lunares" width="18" height="18" patternUnits="userSpaceOnUse"><circle cx="9" cy="9" r="2" fill="#1d1510" opacity=".18"/></pattern>
+    <radialGradient id="vin" cx="50%" cy="50%" r="75%"><stop offset=".55" stop-color="#28190a" stop-opacity="0"/><stop offset="1" stop-color="#28190a" stop-opacity=".55"/></radialGradient>
+  </defs>
+  <rect width="640" height="400" fill="#f1e3c2"/>
+  <g transform="translate(320 40)" opacity=".5">
+    <path d="M0 0 L-60 -500 L60 -500Z" fill="#d9a441" opacity=".4" transform="rotate(15)"/>
+    <path d="M0 0 L-60 -500 L60 -500Z" fill="#d9a441" opacity=".4" transform="rotate(45)"/>
+    <path d="M0 0 L-60 -500 L60 -500Z" fill="#d9a441" opacity=".4" transform="rotate(75)"/>
+    <path d="M0 0 L-60 -500 L60 -500Z" fill="#d9a441" opacity=".4" transform="rotate(-15)"/>
+    <path d="M0 0 L-60 -500 L60 -500Z" fill="#d9a441" opacity=".4" transform="rotate(-45)"/>
+    <path d="M0 0 L-60 -500 L60 -500Z" fill="#d9a441" opacity=".4" transform="rotate(-75)"/>
+  </g>
+  <!-- cartel -->
+  <path d="M170 22 H470 L486 44 L470 66 H170 L154 44Z" fill="#1d1510"/>
+  <rect x="180" y="30" width="280" height="28" fill="none" stroke="#d9a441" stroke-width="2"/>
+  <g fill="#d9a441"><rect x="200" y="41" width="240" height="6" rx="3"/></g>
+  <!-- edificio -->
+  <rect x="60" y="86" width="520" height="304" rx="8" fill="#8a5a3c" stroke="#1d1510" stroke-width="4"/>
+  <rect x="190" y="94" width="382" height="72" fill="#e9d3a6"/><rect x="190" y="94" width="382" height="72" fill="url(#rayas)"/>
+  <rect x="190" y="166" width="382" height="72" fill="#cfdcd2"/><rect x="190" y="166" width="382" height="72" fill="url(#lunares)"/>
+  <rect x="190" y="238" width="382" height="72" fill="#ecc9b8"/><rect x="190" y="238" width="382" height="72" fill="url(#rayas)"/>
+  <rect x="190" y="310" width="382" height="72" fill="#5a1a12"/>
+  <g fill="#7a4a2c"><rect x="190" y="156" width="382" height="10"/><rect x="190" y="228" width="382" height="10"/><rect x="190" y="300" width="382" height="10"/></g>
+  <g stroke="#1d1510" stroke-width="3"><path d="M60 166H580M60 238H580M60 310H580"/></g>
+  <!-- llamas -->
+  <g stroke="#1d1510" stroke-width="2.5">
+    <path d="M220 372 C214 350 232 346 236 326 C242 346 256 352 250 372Z" fill="#b8412f"/>
+    <path d="M290 372 C284 344 304 340 308 316 C314 340 330 348 322 372Z" fill="#e0672e"/>
+    <path d="M360 372 C354 350 372 346 376 326 C382 346 396 352 390 372Z" fill="#b8412f"/>
+    <path d="M430 372 C424 344 444 340 448 316 C454 340 470 348 462 372Z" fill="#e0672e"/>
+    <path d="M500 372 C494 350 512 346 516 326 C522 346 536 352 530 372Z" fill="#b8412f"/>
+  </g>
+  <!-- placas -->
+  <g stroke="#1d1510" stroke-width="2.5">
+    <rect x="70" y="116" width="40" height="28" rx="14" fill="#f8eed6"/>
+    <rect x="70" y="188" width="40" height="28" rx="14" fill="#d9a441"/>
+    <rect x="70" y="260" width="40" height="28" rx="14" fill="#f8eed6"/>
+    <rect x="70" y="332" width="40" height="28" rx="14" fill="#b8412f"/>
+  </g>
+  <!-- hueco + cabina -->
+  <rect x="118" y="94" width="66" height="288" fill="#2c1f17"/>
+  <path d="M144 94V174M158 94V174" stroke="#1d1510" stroke-width="2"/>
+  <rect x="122" y="172" width="58" height="62" rx="5" fill="#d9a441" stroke="#1d1510" stroke-width="3.5"/>
+  <rect x="128" y="178" width="46" height="50" rx="3" fill="#f3dc9e" stroke="#1d1510" stroke-width="2"/>
+  <circle cx="145" cy="198" r="9" fill="#f3dcb2" stroke="#1d1510" stroke-width="2.5"/>
+  <rect x="137" y="184" width="16" height="8" fill="#b8412f" stroke="#1d1510" stroke-width="2"/>
+  <path d="M140 210 h12 l3 16 h-18z" fill="#b8412f" stroke="#1d1510" stroke-width="2"/>
+  <!-- DING -->
+  <g transform="translate(150 158) rotate(-8)">
+    <ellipse rx="34" ry="15" fill="#f8eed6" stroke="#1d1510" stroke-width="3"/>
+    <text y="6" text-anchor="middle" font-family="Georgia, serif" font-weight="900" font-size="17" fill="#b8412f">DING!</text>
+  </g>
+  <!-- vecinos (cabezas) -->
+  <g stroke="#1d1510" stroke-width="2.5">
+    <circle cx="230" cy="128" r="13" fill="#f3dcb2"/><rect x="220" y="104" width="20" height="14" fill="#1d1510"/>
+    <circle cx="280" cy="128" r="13" fill="#e6c08f"/><path d="M269 117 l3 -12 5 6 3 -9 3 9 5 -6 3 12z" fill="#d9a441"/>
+    <circle cx="240" cy="200" r="13" fill="#efab8c"/>
+    <circle cx="300" cy="272" r="13" fill="#c4503a"/><path d="M290 263 q-6 -10 -2 -16 q3 8 7 11z M310 263 q6 -10 2 -16 q-3 8 -7 11z" fill="#fffaf0"/>
+  </g>
+  <g fill="#1d1510"><circle cx="226" cy="126" r="2"/><circle cx="234" cy="126" r="2"/><circle cx="276" cy="126" r="2"/><circle cx="284" cy="126" r="2"/><circle cx="236" cy="198" r="2"/><circle cx="244" cy="198" r="2"/><circle cx="296" cy="270" r="2"/><circle cx="304" cy="270" r="2"/></g>
+  <rect width="640" height="400" fill="url(#vin)"/>
+</svg>

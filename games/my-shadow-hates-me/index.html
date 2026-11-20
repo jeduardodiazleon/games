@@ -1,0 +1,655 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>My Shadow Hates Me · Pocket Arcade</title>
+<link rel="icon" href="../../assets/favicon.svg" type="image/svg+xml">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Alfa+Slab+One&family=Bungee&family=Chakra+Petch:wght@400;600;700&family=Limelight&family=Special+Elite&display=swap">
+<style>
+body{margin:0;padding:0}
+/* Layout: una sola pantalla de juego a sangre; menú de tres cartuchos apilados en móvil, en fila en escritorio. */
+:root {
+  color-scheme: dark;
+  --noche: #120f24;
+  --noche-2: #1c1836;
+  --tinta: #f3efff;
+  --tinta-2: #a9a2cc;
+  --orbita: #ffb347;   /* Atasco Cósmico */
+  --infierno: #ff4d5e; /* Ascensor del Infierno */
+  --sombra: #9b8cff;   /* Mi Sombra Me Odia */
+  --borde: #2d2852;
+  --display: "Bungee", "Impact", "Arial Black", sans-serif;
+  --ui: "Chakra Petch", "Trebuchet MS", system-ui, sans-serif;
+}
+[hidden] { display: none !important; }
+html, body { height: 100%; }
+body {
+  background: var(--noche);
+  color: var(--tinta);
+  font-family: var(--ui);
+  overflow: hidden;
+  -webkit-user-select: none; user-select: none;
+  -webkit-tap-highlight-color: transparent;
+}
+#app { position: relative; height: 100%; overflow: hidden; }
+canvas { position: absolute; inset: 0; width: 100%; height: 100%; touch-action: none; display: block; }
+
+/* ---------- Menú ---------- */
+#menu {
+  position: absolute; inset: 0; overflow-y: auto;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 28px 24px;
+  background:
+    radial-gradient(120% 60% at 50% -10%, #2a1f5c 0%, transparent 60%),
+    var(--noche);
+}
+.menu-inner { max-width: 980px; margin: 0 auto; display: flex; flex-direction: column; gap: 22px; }
+.marca { display: flex; flex-direction: column; gap: 6px; }
+.marca h1 { font-family: var(--display); font-weight: 400; font-size: clamp(30px, 8vw, 54px); line-height: 1; margin: 0; letter-spacing: .5px; text-wrap: balance; }
+.marca h1 span { color: var(--orbita); }
+.marca p { margin: 0; color: var(--tinta-2); font-size: 15px; max-width: 52ch; }
+.cartuchos { display: grid; grid-template-columns: 1fr; gap: 14px; }
+@media (min-width: 760px) { .cartuchos { grid-template-columns: repeat(3, 1fr); } }
+.cartucho {
+  --c: var(--orbita);
+  position: relative; text-align: left; cursor: pointer;
+  display: grid; grid-template-columns: 76px 1fr; gap: 14px; align-items: center;
+  padding: 14px; border-radius: 14px;
+  background: var(--noche-2); color: var(--tinta);
+  border: 1px solid var(--borde);
+  font: inherit;
+  transition: transform .15s ease, border-color .15s ease;
+}
+.cartucho:hover, .cartucho:focus-visible { border-color: var(--c); transform: translateY(-2px); outline: none; }
+.cartucho:focus-visible { box-shadow: 0 0 0 3px color-mix(in srgb, var(--c) 40%, transparent); }
+.cartucho canvas { position: static; width: 76px; height: 76px; border-radius: 10px; background: #0b0918; touch-action: auto; }
+.cartucho h2 { font-family: var(--display); font-weight: 400; font-size: 19px; margin: 0 0 4px; color: var(--c); line-height: 1.1; }
+.cartucho p { margin: 0; color: var(--tinta-2); font-size: 14px; line-height: 1.35; }
+.cartucho .record { margin-top: 6px; font-size: 12px; letter-spacing: .08em; text-transform: uppercase; color: var(--tinta-2); font-variant-numeric: tabular-nums; }
+.cartucho .record b { color: var(--tinta); }
+.pie { color: var(--tinta-2); font-size: 12px; }
+
+/* ---------- HUD ---------- */
+#hud {
+  position: absolute; top: 0; left: 0; right: 0; z-index: 5;
+  display: flex; align-items: center; gap: 10px;
+  padding-top: 10px; padding-bottom: 8px;
+  padding-left: max(12px, env(safe-area-inset-left, 0px));
+  padding-right: max(12px, env(safe-area-inset-right, 0px));
+  pointer-events: none;
+}
+#hud > * { pointer-events: auto; }
+.btn-hud {
+  font: 600 14px var(--ui); color: var(--tinta); background: rgba(28,24,54,.8);
+  border: 1px solid var(--borde); border-radius: 10px; padding: 8px 12px; cursor: pointer;
+}
+.btn-hud:focus-visible { outline: 2px solid var(--tinta); }
+#hudTitulo { flex: 1; min-width: 0; font-family: var(--display); font-size: 15px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+#hudPuntos { font: 700 22px var(--ui); font-variant-numeric: tabular-nums; min-width: 2ch; text-align: right; }
+#hudVidas { font-size: 16px; letter-spacing: 2px; }
+
+/* ---------- Overlay ---------- */
+#overlay {
+  position: absolute; inset: 0; z-index: 8;
+  display: grid; place-items: center;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 16px;
+  background: rgba(10, 8, 22, .72);
+  backdrop-filter: blur(3px);
+}
+.panel {
+  --c: var(--orbita);
+  width: min(420px, 100%); background: var(--noche-2); border: 1px solid var(--borde);
+  border-top: 4px solid var(--c); border-radius: 14px; padding: 22px 20px 20px;
+  display: flex; flex-direction: column; gap: 12px;
+}
+.panel h3 { font-family: var(--display); font-weight: 400; font-size: 26px; margin: 0; color: var(--c); line-height: 1.05; text-wrap: balance; }
+.panel p { margin: 0; color: var(--tinta-2); font-size: 15px; line-height: 1.45; }
+.panel ul { margin: 0; padding-left: 18px; color: var(--tinta); font-size: 15px; line-height: 1.5; display: grid; gap: 4px; }
+.marcador { display: flex; gap: 24px; font-variant-numeric: tabular-nums; }
+.marcador div { display: flex; flex-direction: column; }
+.marcador small { font-size: 11px; letter-spacing: .1em; text-transform: uppercase; color: var(--tinta-2); }
+.marcador strong { font: 700 34px var(--ui); }
+.botones { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 4px; }
+.btn {
+  font: 700 16px var(--ui); border-radius: 10px; padding: 12px 18px; cursor: pointer; border: 0;
+  background: var(--c); color: #160f06; flex: 1;
+}
+.btn.sec { background: transparent; color: var(--tinta); border: 1px solid var(--borde); }
+.btn:focus-visible { outline: 3px solid var(--tinta); outline-offset: 2px; }
+.panel .intro { color: var(--tinta); font-style: italic; border-left: 3px solid var(--c); padding-left: 10px; }
+.panel ul b { color: var(--c); font-weight: 700; }
+.mejoras { display: grid; gap: 8px; }
+.mejora {
+  display: flex; flex-direction: column; gap: 2px; text-align: left; cursor: pointer;
+  font: inherit; color: var(--tinta); background: #15122b; border: 1px solid var(--borde);
+  border-radius: 10px; padding: 12px 14px;
+}
+.mejora b { font: 700 16px var(--ui); color: var(--c); }
+.mejora span { color: var(--tinta-2); font-size: 14px; }
+.mejora:hover, .mejora:focus-visible { border-color: var(--c); outline: none; }
+.panel { max-height: calc(100% - 8px); overflow-y: auto; }
+/* ---------- Tema "años 30" del Ascensor ---------- */
+#app.retro #hud .btn-hud { background: #f8eed6; color: #1d1510; border: 2px solid #1d1510; font-family: "Special Elite", monospace; }
+#app.retro #hudTitulo { font-family: "Limelight", serif; color: #1d1510 !important; }
+#app.retro #hudPuntos { font-family: "Alfa Slab One", serif; color: #b8412f; font-weight: 400; }
+#app.retro #hudVidas { color: #b8412f !important; }
+#app.retro #overlay { background: rgba(40, 25, 10, .55); }
+.panel.retro { background: #f8eed6; color: #1d1510; border: 2.5px solid #1d1510; border-top: 6px solid #b8412f; }
+.panel.retro h3 { font-family: "Limelight", serif; color: #b8412f; }
+.panel.retro p, .panel.retro .marcador small { color: #5a4636; font-family: "Special Elite", monospace; }
+.panel.retro .intro { color: #1d1510; border-left-color: #b8412f; }
+.panel.retro ul { color: #1d1510; }
+.panel.retro ul b { color: #b8412f; }
+.panel.retro .marcador strong { font-family: "Alfa Slab One", serif; font-weight: 400; color: #1d1510; }
+.panel.retro .btn { background: #b8412f; color: #f8eed6; font-family: "Alfa Slab One", serif; font-weight: 400; letter-spacing: .03em; border: 2px solid #1d1510; }
+.panel.retro .btn.sec { background: transparent; color: #1d1510; }
+.panel.retro .mejora { background: #f1e3c2; border: 2px solid #1d1510; color: #1d1510; }
+.panel.retro .mejora b { font-family: "Alfa Slab One", serif; font-weight: 400; color: #b8412f; }
+.panel.retro .mejora span { color: #5a4636; font-family: "Special Elite", monospace; }
+.panel.retro .mejora:hover, .panel.retro .mejora:focus-visible { border-color: #b8412f; }
+@media (prefers-reduced-motion: reduce) { .cartucho { transition: none; } }
+</style>
+</head>
+<body>
+<div id="app">
+  <canvas id="juego" aria-label="Game area"></canvas>
+
+  <div id="hud" hidden>
+    <button class="btn-hud" id="btnMenu" type="button">‹ Arcade</button>
+    <div id="hudTitulo"></div>
+    <div id="hudVidas" aria-label="Lives"></div>
+    <div id="hudPuntos" aria-live="off">0</div>
+    <button class="btn-hud" id="btnPausa" type="button" aria-label="Pause">❚❚</button>
+  </div>
+
+  <div id="overlay" hidden>
+    <div class="panel" id="panel"></div>
+  </div>
+
+  <div id="menu" hidden></div>
+</div>
+
+<script>
+(() => {
+  "use strict";
+
+  // ===================== Utilidades =====================
+  const $ = (id) => document.getElementById(id);
+  const cv = $("juego"), ctx = cv.getContext("2d");
+  let W = 0, H = 0, DPR = 1;
+  const TOP = 58; // alto reservado al HUD
+
+  function resize() {
+    DPR = Math.min(window.devicePixelRatio || 1, 2);
+    const r = cv.getBoundingClientRect();
+    W = r.width; H = r.height;
+    cv.width = Math.round(W * DPR); cv.height = Math.round(H * DPR);
+    ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+    if (juego && juego.onResize) juego.onResize();
+  }
+  const rnd = (a, b) => a + Math.random() * (b - a);
+  const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
+  const dist = (a, b) => Math.hypot(a.x - b.x, a.y - b.y);
+  const css = (v) => getComputedStyle(document.documentElement).getPropertyValue(v).trim();
+
+  const store = {
+    get(k) { try { return Number(localStorage.getItem("arcade_" + k)) || 0; } catch (e) { return 0; } },
+    set(k, v) { try { localStorage.setItem("arcade_" + k, String(v)); } catch (e) {} },
+  };
+
+  // Estrellas de fondo compartidas
+  let estrellas = [];
+  function genEstrellas() {
+    estrellas = Array.from({ length: 90 }, () => ({ x: Math.random(), y: Math.random(), r: Math.random() * 1.3 + .2, a: Math.random() * .6 + .2 }));
+  }
+  function pintarEstrellas(alpha = 1) {
+    ctx.save();
+    for (const s of estrellas) {
+      ctx.globalAlpha = s.a * alpha;
+      ctx.fillStyle = "#cfc8ff";
+      ctx.beginPath(); ctx.arc(s.x * W, s.y * H, s.r, 0, Math.PI * 2); ctx.fill();
+    }
+    ctx.restore();
+  }
+
+  // Textos flotantes (+1, etc.)
+  let flotantes = [];
+  function flotar(x, y, txt, color) { flotantes.push({ x, y, txt, color, t: 0 }); }
+  function pintarFlotantes(dt) {
+    ctx.save();
+    ctx.textAlign = "center"; ctx.font = "700 16px " + css("--ui");
+    flotantes = flotantes.filter((f) => (f.t += dt) < 0.9);
+    for (const f of flotantes) {
+      ctx.globalAlpha = 1 - f.t / 0.9;
+      ctx.fillStyle = f.color;
+      const mitad = ctx.measureText(f.txt).width / 2 + 8;
+      ctx.fillText(f.txt, clamp(f.x, mitad, W - mitad), f.y - f.t * 40);
+    }
+    ctx.restore();
+  }
+
+  // Partículas de explosión
+  let chispas = [];
+  function explotar(x, y, color, n = 36) {
+    for (let i = 0; i < n; i++) {
+      const a = Math.random() * Math.PI * 2, v = rnd(60, 260);
+      chispas.push({ x, y, vx: Math.cos(a) * v, vy: Math.sin(a) * v, t: 0, life: rnd(.5, 1.1), color });
+    }
+  }
+  function pintarChispas(dt) {
+    chispas = chispas.filter((c) => (c.t += dt) < c.life);
+    for (const c of chispas) {
+      c.x += c.vx * dt; c.y += c.vy * dt; c.vx *= .97; c.vy *= .97;
+      ctx.globalAlpha = 1 - c.t / c.life;
+      ctx.fillStyle = c.color;
+      ctx.fillRect(c.x - 2, c.y - 2, 4, 4);
+    }
+    ctx.globalAlpha = 1;
+  }
+
+  // ===================== JUEGO 3: Mi Sombra Me Odia =====================
+  const RECUERDOS = [
+    "Memory 1 · The morning you showed up late",
+    "Memory 2 · The call you never returned",
+    "Memory 3 · The exam you didn't study for",
+    "Memory 4 · The promise you forgot",
+    "Memory 5 · The message you never sent",
+    "Memory 6 · The door you slammed",
+    "Memory 7 · Everything you put off until tomorrow",
+  ];
+  const Sombra = {
+    id: "sombra", nombre: "My Shadow Hates Me", color: "--sombra",
+    desc: "Wander through your memories while your past mistakes chase you. Make your shadows collide.",
+    intro: "Every mistake you make leaves a shadow. They never forget: they repeat exactly what you did a few seconds ago. Recover the fragments of each memory and escape through the portal.",
+    reglas: [
+      "Drag your finger to move. Your shadows replay your path with a delay.",
+      "Collect the green <b>fragments</b>. Once you have them all, the <b>portal</b> to the next memory opens.",
+      "If you make two shadows cross, <b>they cancel out</b> (+10).",
+      "<b>Double tap</b>: a quick dash that makes you invulnerable for a moment.",
+      "The blue <b>clock</b> freezes the shadows. Between memories you pick an upgrade.",
+    ],
+    init() {
+      this.puntos = 0; this.vidas = null; this.over = false;
+      this.sala = 0; this.escudos = 0; this.dashCD = 3; this.iman = 0; this.retrasoExtra = 0; this.sens = 1.15;
+      this.mejoraPendiente = null;
+      this.nuevaSala();
+    },
+    nuevaSala() {
+      this.sala++;
+      this.t = 0; this.banner = { txt: RECUERDOS[(this.sala - 1) % RECUERDOS.length], color: "#c4b5fd", t: 0 };
+      this.yo = { x: W / 2, y: TOP + (H - TOP) / 2, r: 12 };
+      this.hist = [{ t: 0, x: this.yo.x, y: this.yo.y }];
+      const k = Math.min(1 + Math.floor((this.sala - 1) / 2), 4);
+      this.nSombras = 0;
+      this.sombras = [];
+      for (let i = 0; i < k; i++) this.agregarSombra();
+      this.objetivo = 3 + this.sala; this.recogidos = 0;
+      this.portal = null;
+      this.siguiente = Math.max(6, 10 - this.sala * 0.5);
+      this.esfera = this.nuevaPos(120);
+      this.reloj = null; this.proxReloj = rnd(8, 14); this.congelado = 0;
+      this.dash = 0; this.dashT = 0; this.invul = 0; this.ultimoToque = -1; this.dir = { x: 0, y: -1 };
+      this.hue = (250 + this.sala * 23) % 360;
+    },
+    agregarSombra() {
+      const delay = 3 + this.retrasoExtra + (this.nSombras % 5) * 1.5;
+      this.sombras.push({ delay, nace: 0, desde: this.t });
+      this.nSombras++;
+    },
+    onResize() { if (this.yo) { this.yo.x = clamp(this.yo.x, 14, W - 14); this.yo.y = clamp(this.yo.y, TOP + 14, H - 14); } },
+    nuevaPos(lejos) {
+      for (let i = 0; i < 40; i++) {
+        const e = { x: rnd(30, W - 30), y: rnd(TOP + 40, H - 30) };
+        if (!this.yo || dist(e, this.yo) > lejos) return e;
+      }
+      return { x: W / 2, y: TOP + 60 };
+    },
+    posEn(t) {
+      const h = this.hist;
+      if (t <= h[0].t) return h[0];
+      let lo = 0, hi = h.length - 1;
+      while (hi - lo > 1) { const m = (lo + hi) >> 1; if (h[m].t <= t) lo = m; else hi = m; }
+      return h[lo];
+    },
+    golpe() {
+      if (this.invul > 0) return;
+      if (this.escudos > 0) {
+        this.escudos--; this.invul = 1.2;
+        flotar(this.yo.x, this.yo.y - 20, "Shield broken!", "#6ee7f9");
+        return;
+      }
+      explotar(this.yo.x, this.yo.y, "#9b8cff", 50);
+      this.over = true;
+    },
+    update(dt) {
+      this.t += dt;
+      if (this.banner && (this.banner.t += dt) > 2.6) this.banner = null;
+      this.dash = Math.max(0, this.dash - dt);
+      this.invul = Math.max(0, this.invul - dt);
+      this.congelado = Math.max(0, this.congelado - dt);
+
+      if (this.dashT > 0) {
+        const v = 520 * dt; this.dashT -= dt;
+        this.yo.x += this.dir.x * v; this.yo.y += this.dir.y * v;
+      }
+      this.yo.x = clamp(this.yo.x, 14, W - 14); this.yo.y = clamp(this.yo.y, TOP + 14, H - 14);
+
+      this.hist.push({ t: this.t, x: this.yo.x, y: this.yo.y });
+      const maxDelay = Math.max(6, ...this.sombras.map((s) => s.delay)) + 12;
+      while (this.hist.length > 2 && this.hist[1].t < this.t - maxDelay) this.hist.shift();
+
+      if ((this.siguiente -= dt) <= 0) {
+        this.agregarSombra();
+        this.siguiente = Math.max(6, 10 - this.sala * 0.5);
+        flotar(W / 2, TOP + 70, "Another mistake is chasing you", "#c4b5fd");
+      }
+
+      // Sombras (el tiempo congelado las deja quietas)
+      for (const s of this.sombras) {
+        // congeladas: se quedan quietas y se retrasan un poco más
+        if (this.congelado > 0 && s.x != null) { s.delay += dt; continue; }
+        if (this.t - s.desde < s.delay) continue;
+        s.nace = Math.min(1, s.nace + dt * 1.2);
+        s.tt = this.t - s.delay;
+        const p = this.posEn(s.tt);
+        s.x = p.x; s.y = p.y;
+      }
+      const activas = this.sombras.filter((s) => s.x != null && s.nace >= 1);
+      for (const s of activas) if (dist(s, this.yo) < this.yo.r * 1.6) this.golpe();
+
+      // Sombras que se anulan
+      for (let i = 0; i < activas.length; i++) for (let j = i + 1; j < activas.length; j++) {
+        const a = activas[i], b = activas[j];
+        if (!a.muerta && !b.muerta && Math.abs(a.delay - b.delay) > 0.2 && dist(a, b) < 18) {
+          a.muerta = b.muerta = true;
+          explotar((a.x + b.x) / 2, (a.y + b.y) / 2, "#5b4fb8", 28);
+          this.puntos += 10;
+          flotar((a.x + b.x) / 2, (a.y + b.y) / 2 - 14, "Cancelled out! +10", "#c4b5fd");
+        }
+      }
+      this.sombras = this.sombras.filter((s) => !s.muerta);
+
+      // Fragmentos
+      const alcance = this.yo.r + 12 + this.iman;
+      if (this.esfera && dist(this.esfera, this.yo) < alcance) {
+        this.recogidos++; this.puntos += 5;
+        flotar(this.esfera.x, this.esfera.y - 10, "+5", "#7ee0a1");
+        if (this.recogidos >= this.objetivo) {
+          this.esfera = null;
+          this.portal = this.nuevaPos(160);
+          flotar(W / 2, TOP + 70, "The portal is open!", "#7ee0a1");
+        } else this.esfera = this.nuevaPos(120);
+      }
+      // Reloj
+      if (!this.reloj && (this.proxReloj -= dt) <= 0) { this.reloj = this.nuevaPos(100); this.reloj.vida = 7; }
+      if (this.reloj) {
+        this.reloj.vida -= dt;
+        if (dist(this.reloj, this.yo) < this.yo.r + 14 + this.iman) {
+          this.congelado = 3; this.reloj = null; this.proxReloj = rnd(12, 18);
+          flotar(this.yo.x, this.yo.y - 20, "Time frozen!", "#6ee7f9");
+        } else if (this.reloj.vida <= 0) { this.reloj = null; this.proxReloj = rnd(10, 16); }
+      }
+      // Portal
+      if (this.portal && dist(this.portal, this.yo) < this.yo.r + 18) {
+        this.puntos += 25;
+        this.mejoraPendiente = this.opciones();
+        this.trasMejora = () => this.nuevaSala();
+      }
+    },
+    opciones() {
+      const todas = [
+        { t: "Shield", d: "Survive one shadow hit.", f: () => { this.escudos++; } },
+        { t: "Quick dash", d: "Double tap recharges faster.", f: () => { this.dashCD = Math.max(1.2, this.dashCD - 0.8); }, si: () => this.dashCD > 1.2 },
+        { t: "Magnet", d: "Pull in fragments and clocks from farther away.", f: () => { this.iman += 22; } },
+        { t: "Slow memory", d: "Your shadows trail half a second further behind.", f: () => { this.retrasoExtra += 0.5; } },
+        { t: "Light feet", d: "Move 20% farther with the same gesture.", f: () => { this.sens *= 1.2; } },
+      ].filter((o) => !o.si || o.si());
+      return { titulo: "Memory cleared", texto: "+25 points. Before the next memory, pick an upgrade:", opciones: todas.sort(() => Math.random() - 0.5).slice(0, 3) };
+    },
+    onDown(x, y) {
+      const ahora = performance.now();
+      if (ahora - this.ultimoToque < 300 && this.dash <= 0) {
+        this.dash = this.dashCD; this.dashT = 0.16; this.invul = Math.max(this.invul, 0.45);
+        flotar(this.yo.x, this.yo.y - 20, "Dash!", "#f3efff");
+      }
+      this.ultimoToque = ahora;
+    },
+    onMove(x, y, dx, dy) {
+      this.yo.x += dx * this.sens; this.yo.y += dy * this.sens;
+      const m = Math.hypot(dx, dy);
+      if (m > 1.5) this.dir = { x: dx / m, y: dy / m };
+    },
+    draw() {
+      // ambiente: tinte del recuerdo y viñeta
+      ctx.fillStyle = "hsla(" + this.hue + ",60%,40%,.08)"; ctx.fillRect(0, TOP, W, H - TOP);
+      const vg = ctx.createRadialGradient(W / 2, H / 2, Math.min(W, H) * 0.25, W / 2, H / 2, Math.max(W, H) * 0.75);
+      vg.addColorStop(0, "rgba(0,0,0,0)"); vg.addColorStop(1, "rgba(0,0,0,.55)");
+      ctx.fillStyle = vg; ctx.fillRect(0, 0, W, H);
+
+      // rastro de las sombras
+      for (const s of this.sombras) {
+        if (s.x == null) continue;
+        ctx.strokeStyle = "rgba(155,140,255,.12)"; ctx.lineWidth = 6; ctx.lineCap = "round";
+        ctx.beginPath();
+        let first = true;
+        for (let tt = s.tt ?? 0; tt <= this.t; tt += 0.08) {
+          const p = this.posEn(tt);
+          if (first) { ctx.moveTo(p.x, p.y); first = false; } else ctx.lineTo(p.x, p.y);
+        }
+        ctx.stroke();
+      }
+      // portal
+      if (this.portal) {
+        const P = this.portal, a = this.t * 3;
+        ctx.save(); ctx.shadowColor = "#7ee0a1"; ctx.shadowBlur = 24;
+        ctx.strokeStyle = "#7ee0a1"; ctx.lineWidth = 3;
+        for (let k = 0; k < 3; k++) { ctx.beginPath(); ctx.arc(P.x, P.y, 12 + k * 6, a + k, a + k + Math.PI * 1.3); ctx.stroke(); }
+        ctx.restore();
+      }
+      // fragmento
+      if (this.esfera) {
+        const pulse = 1 + Math.sin(this.t * 6) * 0.12;
+        ctx.save(); ctx.shadowColor = "#7ee0a1"; ctx.shadowBlur = 18; ctx.fillStyle = "#7ee0a1";
+        ctx.translate(this.esfera.x, this.esfera.y); ctx.rotate(this.t);
+        ctx.beginPath(); ctx.moveTo(0, -9 * pulse); ctx.lineTo(7 * pulse, 0); ctx.lineTo(0, 9 * pulse); ctx.lineTo(-7 * pulse, 0); ctx.closePath(); ctx.fill();
+        ctx.restore();
+      }
+      // reloj
+      if (this.reloj) {
+        const R = this.reloj;
+        ctx.globalAlpha = R.vida < 2 ? (Math.sin(this.t * 20) > 0 ? 1 : 0.3) : 1;
+        ctx.strokeStyle = "#6ee7f9"; ctx.lineWidth = 2.5;
+        ctx.beginPath(); ctx.arc(R.x, R.y, 10, 0, Math.PI * 2); ctx.stroke();
+        ctx.beginPath(); ctx.moveTo(R.x, R.y); ctx.lineTo(R.x, R.y - 6); ctx.moveTo(R.x, R.y); ctx.lineTo(R.x + 5, R.y); ctx.stroke();
+        ctx.globalAlpha = 1;
+      }
+      // sombras
+      for (const s of this.sombras) {
+        if (s.x == null) continue;
+        ctx.globalAlpha = 0.35 + 0.65 * s.nace;
+        ctx.fillStyle = "#05030d"; ctx.strokeStyle = this.congelado > 0 ? "#6ee7f9" : "#5b4fb8"; ctx.lineWidth = 2;
+        ctx.beginPath(); ctx.arc(s.x, s.y, this.yo.r + 1, 0, Math.PI * 2); ctx.fill(); ctx.stroke();
+        ctx.fillStyle = this.congelado > 0 ? "#6ee7f9" : "#ff4d5e";
+        ctx.beginPath(); ctx.arc(s.x - 4, s.y - 2, 2, 0, Math.PI * 2); ctx.arc(s.x + 4, s.y - 2, 2, 0, Math.PI * 2); ctx.fill();
+        ctx.globalAlpha = 1;
+      }
+      // yo
+      ctx.save();
+      ctx.globalAlpha = this.invul > 0 && Math.sin(this.t * 30) > 0 ? 0.5 : 1;
+      ctx.shadowColor = "#f3efff"; ctx.shadowBlur = 20; ctx.fillStyle = "#f3efff";
+      ctx.beginPath(); ctx.arc(this.yo.x, this.yo.y, this.yo.r, 0, Math.PI * 2); ctx.fill(); ctx.restore();
+      ctx.fillStyle = "#120f24";
+      ctx.beginPath(); ctx.arc(this.yo.x - 4, this.yo.y - 2, 2, 0, Math.PI * 2); ctx.arc(this.yo.x + 4, this.yo.y - 2, 2, 0, Math.PI * 2); ctx.fill();
+      // escudos y recarga del impulso
+      for (let k = 0; k < this.escudos; k++) {
+        ctx.strokeStyle = "#6ee7f9"; ctx.lineWidth = 2;
+        ctx.beginPath(); ctx.arc(this.yo.x, this.yo.y, this.yo.r + 6 + k * 4, 0, Math.PI * 2); ctx.stroke();
+      }
+      if (this.dash > 0) {
+        ctx.strokeStyle = "rgba(243,239,255,.5)"; ctx.lineWidth = 2;
+        ctx.beginPath(); ctx.arc(this.yo.x, this.yo.y, this.yo.r + 4, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * (1 - this.dash / this.dashCD)); ctx.stroke();
+      }
+      // progreso
+      ctx.fillStyle = "#a9a2cc"; ctx.font = "600 11px " + css("--ui"); ctx.textAlign = "right"; ctx.textBaseline = "alphabetic";
+      ctx.fillText(this.portal ? "Go to the portal!" : "Fragments " + this.recogidos + "/" + this.objetivo, W - 14, TOP + 2);
+      ctx.textAlign = "left";
+      ctx.fillText("Memory " + this.sala, 14, TOP + 2);
+      pintarBanner(this.banner);
+    },
+  };
+
+  function pintarBanner(b) {
+    if (!b) return;
+    const a = b.t < 0.3 ? b.t / 0.3 : b.t > 2 ? Math.max(0, 1 - (b.t - 2) / 0.5) : 1;
+    ctx.save();
+    ctx.globalAlpha = a;
+    ctx.font = "400 " + (W < 420 ? 15 : 19) + "px " + css("--display");
+    ctx.textAlign = "center"; ctx.textBaseline = "middle";
+    const w = Math.min(W - 24, ctx.measureText(b.txt).width + 28);
+    ctx.fillStyle = "rgba(10,8,22,.75)";
+    ctx.beginPath(); ctx.roundRect(W / 2 - w / 2, TOP + 26, w, 36, 10); ctx.fill();
+    ctx.fillStyle = b.color;
+    ctx.fillText(b.txt, W / 2, TOP + 45, W - 40);
+    ctx.restore();
+  }
+
+  const JUEGOS = [Sombra];
+
+  // ===================== Control de partida =====================
+  let juego = null, estado = "menu"; // menu | intro | jugando | pausa | fin
+
+  function abrir(j) {
+    juego = j; estado = "intro";
+    $("app").classList.toggle("retro", !!j.retro);
+    $("menu").hidden = true; $("hud").hidden = false;
+    $("hudTitulo").textContent = j.nombre;
+    $("hudTitulo").style.color = "var(" + j.color + ")";
+    flotantes = []; chispas = [];
+    juego.init();
+    actualizarHud();
+    const ul = j.reglas.map((r) => "<li>" + r + "</li>").join("");
+    panel(j, `<h3>${j.nombre}</h3>${j.intro ? `<p class="intro">${j.intro}</p>` : ""}<ul>${ul}</ul>
+      <div class="botones"><button class="btn" id="bJugar" type="button">Play</button></div>`);
+    $("bJugar").onclick = empezar; $("bJugar").focus();
+  }
+  function empezar() { juego.init(); flotantes = []; chispas = []; estado = "jugando"; $("overlay").hidden = true; actualizarHud(); }
+  function panel(j, html) {
+    const p = $("panel"); p.style.setProperty("--c", "var(" + j.color + ")"); p.innerHTML = html;
+    p.classList.toggle("retro", !!j.retro);
+    $("overlay").hidden = false;
+  }
+  function pausar() {
+    if (estado !== "jugando") return;
+    estado = "pausa";
+    panel(juego, `<h3>Paused</h3><p>Score: ${juego.puntos}</p>
+      <div class="botones"><button class="btn" id="bSeguir" type="button">Resume</button>
+      <button class="btn sec" id="bSalir" type="button">Arcade</button></div>`);
+    $("bSeguir").onclick = () => { estado = "jugando"; $("overlay").hidden = true; };
+    $("bSalir").onclick = menu; $("bSeguir").focus();
+  }
+  function fin() {
+    estado = "fin";
+    const rec = store.get(juego.id), nuevo = juego.puntos > rec;
+    if (nuevo) store.set(juego.id, juego.puntos);
+    const frases = {
+      atasco: "Planetary pile-up. Space traffic shows no mercy.",
+      ascensor: "The tenants have called a building meeting. You lasted " + (juego.turno - 1) + " shifts.",
+      sombra: "Your past caught up with you. You reached memory " + juego.sala + ".",
+    };
+    setTimeout(() => {
+      panel(juego, `<h3>${nuevo ? "New high score!" : "Game over"}</h3><p>${frases[juego.id]}</p>
+        <div class="marcador"><div><small>Score</small><strong>${juego.puntos}</strong></div>
+        <div><small>Best</small><strong>${Math.max(rec, juego.puntos)}</strong></div></div>
+        <div class="botones"><button class="btn" id="bOtra" type="button">Play again</button>
+        <button class="btn sec" id="bMenu2" type="button">Arcade</button></div>`);
+      $("bOtra").onclick = empezar; $("bMenu2").onclick = menu; $("bOtra").focus();
+    }, 650);
+  }
+  function mostrarMejoras() {
+    const m = juego.mejoraPendiente; juego.mejoraPendiente = null;
+    estado = "mejora";
+    const botones = m.opciones.map((o, i) =>
+      `<button class="mejora" id="mej${i}" type="button"><b>${o.t}</b><span>${o.d}</span></button>`).join("");
+    panel(juego, `<h3>${m.titulo}</h3><p>${m.texto}</p><div class="mejoras">${botones}</div>`);
+    m.opciones.forEach((o, i) => {
+      $("mej" + i).onclick = () => {
+        o.f();
+        if (juego.trasMejora) { juego.trasMejora(); juego.trasMejora = null; }
+        estado = "jugando"; $("overlay").hidden = true; actualizarHud();
+      };
+    });
+    $("mej0").focus();
+  }
+  function menu() { location.href = "../../index.html"; }
+  function actualizarHud() {
+    if (!juego) return;
+    $("hudPuntos").textContent = juego.puntos;
+    $("hudVidas").textContent = juego.vidas == null ? "" : "♥".repeat(Math.max(0, juego.vidas)) + "♡".repeat(Math.max(0, 3 - juego.vidas));
+    $("hudVidas").style.color = "var(--infierno)";
+  }
+  $("btnMenu").onclick = menu;
+  $("btnPausa").onclick = pausar;
+  document.addEventListener("visibilitychange", () => { if (document.hidden) pausar(); });
+
+  // ===================== Entrada =====================
+  let puntero = null;
+  cv.addEventListener("pointerdown", (e) => {
+    if (estado !== "jugando") return;
+    const r = cv.getBoundingClientRect();
+    puntero = { id: e.pointerId, x: e.clientX - r.left, y: e.clientY - r.top };
+    try { cv.setPointerCapture(e.pointerId); } catch (_) {}
+    juego.onDown && juego.onDown(puntero.x, puntero.y);
+    e.preventDefault();
+  });
+  cv.addEventListener("pointermove", (e) => {
+    if (estado !== "jugando" || !puntero || e.pointerId !== puntero.id) return;
+    const r = cv.getBoundingClientRect();
+    const x = e.clientX - r.left, y = e.clientY - r.top;
+    juego.onMove && juego.onMove(x, y, x - puntero.x, y - puntero.y);
+    puntero.x = x; puntero.y = y;
+  });
+  const soltar = () => { puntero = null; };
+  cv.addEventListener("pointerup", soltar); cv.addEventListener("pointercancel", soltar);
+  window.addEventListener("keydown", (e) => {
+    if (e.key === "Escape" || e.key === "p") { estado === "jugando" ? pausar() : null; }
+    if (juego && juego.teclas) juego.teclas[e.key] = true;
+  });
+  window.addEventListener("keyup", (e) => { if (juego && juego.teclas) juego.teclas[e.key] = false; });
+
+  // ===================== Bucle =====================
+  let ultimo = performance.now();
+  function bucle(ahora) {
+    const dt = Math.min(0.05, (ahora - ultimo) / 1000); ultimo = ahora;
+    ctx.fillStyle = css("--noche"); ctx.fillRect(0, 0, W, H);
+    if (estado === "menu") { requestAnimationFrame(bucle); return; }
+    if (!juego.retro) pintarEstrellas(1);
+    if (estado === "jugando") {
+      juego.update(dt);
+      actualizarHud();
+      if (juego.over) fin();
+      else if (juego.mejoraPendiente) mostrarMejoras();
+    }
+    juego.draw();
+    pintarChispas(estado === "pausa" ? 0 : dt);
+    pintarFlotantes(estado === "pausa" ? 0 : dt);
+    requestAnimationFrame(bucle);
+  }
+
+  function arrancar() {
+    genEstrellas(); resize();
+    window.addEventListener("resize", resize);
+    requestAnimationFrame(bucle);
+    abrir(JUEGOS[0]);
+  }
+
+  arrancar();
+})();
+</script>
+</body>
+</html>
